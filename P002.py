@@ -1,4 +1,6 @@
 import re
+import time
+from ttp import ttp
 
 #Fecha del log
 file_name = '2024-09-20'
@@ -25,15 +27,17 @@ with open(file='logs/wt1tcs.{0}.log'.format(file_name), mode='r', encoding='iso-
 
         headerless_line = re.sub(header_re, '', line)
 
-        #Eliminación de variables dinámicas triviales
+        #Eliminación de variables dinámicas triviales        
+        datetime_re = re.compile(r'[0-2][0-9]{3}-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*')
         date_re = re.compile(r'[0-2][0-9]{3}-[0-1][0-9]-[0-3][0-9]')
-        time_re = re.compile(r'[0-2][0-9]:[0-5][0-9]:[0-5][0-9]')
+        time_re = re.compile(r'[0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*')
 
-        dateless_line = re.sub(date_re, '{{date}}', headerless_line)
+
+        datetimeless_line = re.sub(datetime_re, '{{datetime}}', headerless_line)
+        dateless_line = re.sub(date_re, '{{date}}', datetimeless_line)
         timeless_line = re.sub(time_re, '{{time}}', dateless_line)
 
         processed_lines.append(timeless_line)
-
 
 """ 
     ------- Agrupamiento -------
@@ -43,7 +47,7 @@ with open(file='logs/wt1tcs.{0}.log'.format(file_name), mode='r', encoding='iso-
     Retorna: 
         - grouped_lines: dict[] -> Lista de diccionarios, cada diccionario compuesto de dos campos:
             * s_t: Lista con tokens estáticos.
-            * lines: Lista con las lineas de log correspondientes al grupo.
+            * lines: Lista con los tokens de las lineas de log correspondientes al grupo.
 """
 grouped_lines = []
 
@@ -60,7 +64,7 @@ for line in processed_lines:
 
     for group in grouped_lines:
         if (group["s_t"] == static_tokens):
-            group["lines"].append(line)
+            group["lines"].append(tokens)
             saved_flag = True
             break
 
@@ -68,11 +72,10 @@ for line in processed_lines:
     if (not saved_flag):
         new_group = {
             "s_t" : static_tokens,
-            "lines" : [line]
+            "lines" : [tokens]
         }
 
         grouped_lines.append(new_group)
-
 
 """ 
     ------- Análisis -------
@@ -86,38 +89,92 @@ for line in processed_lines:
 templates = []
 
 for group in grouped_lines:
+    
+    #Ordenar lineas del grupo segun tamaño de lista de forma descendiente
+    group["lines"].sort(key=lambda x: len(x), reverse=True)
+
+    #Obtener máximo de las lineas del grupo
+    max_length = len(group["lines"][0])
 
     #Contar repeticiones de tokens
     token_counter = {}
 
-    for line in group["lines"]:
-        
-        #Delimitar tokens
-        tokens = line.split()
+    for tokens in group["lines"]:
+
+        #Obtener duplicados
+        duplicates = [x for x in set(tokens) if tokens.count(x) > 1]
 
         #Conteo
         for token in tokens:
-            token_counter[token] += 1
+            if(token in list(token_counter) and token not in duplicates):
+                token_counter[token] += 1
+            
+            else:
+                if(token not in duplicates):
+                    token_counter[token] = 1
+                else:
+                    token_counter[token + '_duplicado'] = 1
+                    duplicates.remove(token)
 
     #Selección de tokens para plantilla segun repeticiones
     template = ""
 
+    #Obtener la máxima frecuencia de ocurrencia de tokens
     max_frecuency = len(group["lines"])
-    i = 0
 
-    for token in token_counter.keys():
-        if (token_counter[token] == max_frecuency):
-            template = template + " " + token + " "
-        else:
-            template = template + " {{ {0} }} ".format(i)
-            i += 1
+    #Contador de tokens dinámicos
+    i_td = 0
+
+    #Contador de tokens totales
+    i_tt = 0
+
+    #Generación de la plantilla
+    while (i_tt < max_length):
+
+        try:
+            token = list(token_counter)[i_tt]
+
+            if (token_counter[token] == max_frecuency):
+                template = template + " " + token + " "
+
+            else:
+                template = template + " {{%d}} " % i_td
+                i_td += 1
+
+            i_tt += 1
+        
+        except IndexError as e:
+            #print(template)
+            break
+    
+    #Normalizar duplicados
+    template_final = template.replace('_duplicado', '')
 
     #Guardar plantilla y datos
-    templates.append(template)
-
+    templates.append(template_final)
 
 """ 
-    ------- Parsing -------
-    Se parsea cada linea de log usando las plantillas generada anteriormente
-
+    ------ Parsing -------
+    Se parsea cada linea de log usando las plantillas generada anteriormente, usando TTP.
 """
+parsed_data = []
+
+i_time = time.time()
+
+for line in processed_lines:
+    for template in templates:
+        try:
+            parser = ttp(data=line, template=template)
+            parser.parse()
+            result = parser.result(template='per_input', format="dictionary")[0][0]
+
+            if(len(result) != 0): 
+                parsed_data.append(result)
+                break
+
+        except re.PatternError as e:
+            continue
+
+f_time = time.time()
+
+print(f_time - i_time)
