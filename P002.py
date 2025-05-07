@@ -1,5 +1,7 @@
 import re
+import json
 import time
+import xml
 from ttp import ttp
 
 #Fecha del log
@@ -14,6 +16,7 @@ file_name = '2024-09-20'
     Retorna: 
         - processed_lines: str[] -> Lista de lineas de log procesadas.
 """
+headerless_lines = []
 processed_lines = [] 
 
 with open(file='logs/wt1tcs.{0}.log'.format(file_name), mode='r', encoding='iso-8859-1') as logs:
@@ -26,6 +29,8 @@ with open(file='logs/wt1tcs.{0}.log'.format(file_name), mode='r', encoding='iso-
         header_re = re.compile(r'([a-zA-Z]{3}\s[0-9]{2}\s[0-9]{2}:[0-9]{2}:[0-9]{2}?)\swt1tcs\s(.+)(\[[0-9]+\]):')
 
         headerless_line = re.sub(header_re, '', line)
+
+        headerless_lines.append(headerless_line)
 
         #Eliminación de variables dinámicas triviales        
         datetime_re = re.compile(r'[0-2][0-9]{3}-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*')
@@ -161,20 +166,48 @@ parsed_data = []
 
 i_time = time.time()
 
-for line in processed_lines:
-    for template in templates:
-        try:
-            parser = ttp(data=line, template=template)
-            parser.parse()
-            result = parser.result(template='per_input', format="dictionary")[0][0]
+with open("P002_log.txt", "w") as p_log:
 
-            if(len(result) != 0): 
-                parsed_data.append(result)
-                break
+    #Itera las lineas de logs entre 70000 y 75000
+    for line in headerless_lines[71000:72000]:
 
-        except re.PatternError as e:
-            continue
+        line_log = "*** LINEA: " + line + "\n"
+        p_log.write(line_log)
+        print(line_log)
+
+        #Itera las 1300+ plantillas
+        for template in templates:
+
+            #Parseo con expresiones regulares
+            try:
+                parser = ttp(data=line, template=template)
+                parser.parse()
+                key = list(parser.result(template='per_input', structure="dictionary"))[0]
+                result = parser.result(template='per_input', structure="dictionary")[key][0]
+
+                #Si hay match con la expresion regular, entonces se parsean los valores dinámicos y se salta a la siguiente linea
+                if(len(result) != 0):
+                    template_log = "PLANTILLA: " + template + "\n"
+                    p_log.write(template_log)
+                    print(template_log)
+
+                    parsed_data.append(result)
+                    break
+
+            #Trasciende de errores por etiquetas con mismo nombre en la plantilla (se conoce solución pero se posterga su implementación)
+            except re.PatternError as e:
+                continue
+
+            #Recolecta otros errores sobre la plantilla usada (se revisarán a posteriori)
+            except xml.etree.ElementTree.ParseError as err:                
+                error_log = "ERROR: " + str(err) + "\n"
+                p_log.write(error_log)
+                print(error_log)
 
 f_time = time.time()
 
+#Tiempo de SOLO parseo entre lineas 7100 y 7200 es de 1220.3495543003082 segundos (20.34 minutos)
 print(f_time - i_time)
+
+with open("log_data.json", "w") as data_file:
+    json.dump(parsed_data, data_file)
