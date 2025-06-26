@@ -352,35 +352,35 @@ def save_parsed_data(parsed_data, dest_arch_name):
 
 #Main
 if __name__ == '__main__':
+
     #### MVP Logger
     logging.basicConfig(filename='P005.log', level=logging.INFO)
     logger = logging.getLogger('myLogger')
 
     ### Log date
-    file_name = '2024-09-20'
-
+    date = '2024-09-20'
     ### Relative path of destination file for parsed data
     dest_arch_name = 'P005_data.txt'
 
-    ### Observations csv file extraction
-    obs_arch_name = "wdb_query_{0}.csv".format(file_name)
-    obs_list = open_obs_file(obs_arch_name)
-
-    ### Log lines extraction
-    log_arch_name = 'logs/wt1tcs.{0}.log'.format(file_name)
-    log_lines = open_txt_file(log_arch_name)
-
-    ### Templates extraction
-    tplt_arch_name = 'P005_templates.txt'
-    tplt_list = open_txt_file(tplt_arch_name)
-
-    #### Log lines pre-processing
-    headerless_logs = log_pre_processing(logger, log_lines)
+    #### Log lines pre-processing  
+    headerless_logs_procesing = False
+    headerless_logs = None
+    if headerless_logs_procesing:
+        log_lines = open_txt_file('logs/wt1tcs.{0}.log'.format(date))
+        headerless_logs = log_pre_processing(logger, log_lines)
+        # Save headerless logs to file
+    else:
+        headerless_logs = []# Load from file
 
     #### Log lines' observation filtering
+    obs_arch_name = "wdb_query_{0}.csv".format(date)
+    obs_list = open_obs_file(obs_arch_name)
     obs_logs = obs_filtering(logger, headerless_logs, obs_list)
 
     #### Log lines parsing
+    ### Templates extraction
+    tplt_arch_name = 'P005_templates.txt'
+    tplt_list = open_txt_file(tplt_arch_name)
     parsed_data = log_parsing_regex(logger, obs_logs, tplt_list)
 
     #### Parsed data saving
