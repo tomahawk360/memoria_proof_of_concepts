@@ -1,0 +1,79 @@
+<mxfile host="65bd71144e">
+    <diagram name="Page-1" id="6S-lLVhvpVu_ySWFUY5j">
+        <mxGraphModel dx="1415" dy="1309" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="19" style="edgeStyle=none;html=1;" edge="1" parent="1" source="BbhJAAzY7pNX3ovd0ahZ-4" target="18">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="BbhJAAzY7pNX3ovd0ahZ-4" value="header_removal" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="310" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="BbhJAAzY7pNX3ovd0ahZ-14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="BbhJAAzY7pNX3ovd0ahZ-10" target="BbhJAAzY7pNX3ovd0ahZ-13" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="BbhJAAzY7pNX3ovd0ahZ-10" value="log_parsing" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="940" y="310" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="BbhJAAzY7pNX3ovd0ahZ-13" target="16">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="BbhJAAzY7pNX3ovd0ahZ-13" value="save_parsed_data" style="rounded=0;whiteSpace=wrap;html=1;glass=0;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="310" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="BbhJAAzY7pNX3ovd0ahZ-16" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="445" y="265" width="20" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="BbhJAAzY7pNX3ovd0ahZ-17" value="&lt;div&gt;- &lt;b&gt;Cantidad de líneas&lt;/b&gt;: 13&lt;/div&gt;&lt;div&gt;- &lt;b&gt;Entrada&lt;/b&gt;: logger, log_lines, obs_list&lt;/div&gt;&lt;div&gt;- &lt;b&gt;Salida&lt;/b&gt;: Lista de listas de tuplas&amp;nbsp;&lt;/div&gt;- &lt;b&gt;Tiempo de ejecución: &lt;/b&gt;0.003 seg&lt;br&gt;&lt;div&gt;- &lt;b&gt;Memoria usada:&amp;nbsp;&lt;/b&gt;6568 bytes&lt;/div&gt;&lt;div&gt;- &lt;b&gt;Memoria Peak:&amp;nbsp;&lt;/b&gt;7564 bytes&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="170" width="210" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="BbhJAAzY7pNX3ovd0ahZ-18" value="&lt;div&gt;- &lt;b&gt;Cantidad de líneas&lt;/b&gt;: 16&lt;/div&gt;&lt;div&gt;- &lt;b&gt;Entrada&lt;/b&gt;: logger, log_lines&lt;/div&gt;&lt;div&gt;- &lt;b&gt;Salida&lt;/b&gt;: Lista de listas de tuplas&amp;nbsp;&lt;/div&gt;- &lt;b&gt;Tiempo de ejecución: &lt;/b&gt;1.6&lt;b&gt;3&amp;nbsp;&lt;/b&gt;seg&lt;br&gt;&lt;div&gt;- &lt;b&gt;Memoria usada: &lt;/b&gt;14314744 bytes&lt;/div&gt;&lt;div&gt;- &lt;b&gt;Memoria Peak:&amp;nbsp;&lt;/b&gt;14315822 bytes&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="170" width="210" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="BbhJAAzY7pNX3ovd0ahZ-19" value="&lt;div&gt;- &lt;b&gt;Cantidad de líneas&lt;/b&gt;: 18&lt;/div&gt;&lt;div&gt;- &lt;b&gt;Entrada&lt;/b&gt;: logger, log_sections, templates_list&lt;/div&gt;&lt;div&gt;- &lt;b&gt;Salida&lt;/b&gt;: Lista de jsons&amp;nbsp;&lt;/div&gt;- &lt;b&gt;Tiempo de ejecución:&amp;nbsp;&lt;/b&gt;&lt;span id=&quot;cwos&quot; class=&quot;qv3Wpe&quot;&gt;3.36&lt;/span&gt;&lt;span id=&quot;cwos&quot; class=&quot;qv3Wpe&quot;&gt;&amp;nbsp;min&lt;/span&gt;&lt;br&gt;&lt;div&gt;- &lt;b&gt;Memoria usada: &lt;/b&gt;2222427 bytes&lt;/div&gt;&lt;div&gt;- &lt;b&gt;Memoria Peak: &lt;/b&gt;3630329 bytes&lt;b&gt;&amp;nbsp;&lt;br&gt;&lt;/b&gt;&lt;br&gt;&lt;/div&gt;" style="text;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="910" y="165" width="300" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" style="edgeStyle=none;html=1;" edge="1" parent="1" source="BbhJAAzY7pNX3ovd0ahZ-8" target="21">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="BbhJAAzY7pNX3ovd0ahZ-8" value="obs_filtering" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="580" y="310" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="10" target="BbhJAAzY7pNX3ovd0ahZ-4">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="&lt;div&gt;open_txt_file&lt;/div&gt;&lt;div&gt;(log_arch_name)&lt;/div&gt;" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.document2;whiteSpace=wrap;size=0.25;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="310" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="11" target="BbhJAAzY7pNX3ovd0ahZ-8">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="&lt;div&gt;open_txt_file&lt;/div&gt;&lt;div&gt;(tplt_arch_name)&lt;/div&gt;" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.document2;whiteSpace=wrap;size=0.25;" vertex="1" parent="1">
+                    <mxGeometry x="580" y="440" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" parent="1" source="12" target="BbhJAAzY7pNX3ovd0ahZ-10">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="&lt;div&gt;open_txt_file&lt;/div&gt;&lt;div&gt;(tplt_arch_name)&lt;/div&gt;" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.document2;whiteSpace=wrap;size=0.25;" vertex="1" parent="1">
+                    <mxGeometry x="940" y="440" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="&lt;div&gt;...&lt;/div&gt;" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.document2;whiteSpace=wrap;size=0.25;" vertex="1" parent="1">
+                    <mxGeometry x="1300" y="310" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" style="edgeStyle=none;html=1;" edge="1" parent="1" source="18" target="BbhJAAzY7pNX3ovd0ahZ-8">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" value="&lt;div&gt;tmp&lt;/div&gt;" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.document2;whiteSpace=wrap;size=0.25;" vertex="1" parent="1">
+                    <mxGeometry x="400" y="310" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" style="edgeStyle=none;html=1;" edge="1" parent="1" source="21" target="BbhJAAzY7pNX3ovd0ahZ-10">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" value="&lt;div&gt;tnp&lt;/div&gt;" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.document2;whiteSpace=wrap;size=0.25;" vertex="1" parent="1">
+                    <mxGeometry x="760" y="310" width="120" height="60" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
