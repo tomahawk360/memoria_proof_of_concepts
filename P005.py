@@ -61,7 +61,8 @@ Args:
     log_lines: List of log lines, in string form.
 
 Returns:
-    A list of lists, with each containing a group of headerless log lines, fitted by observation period.
+    A list of lists, with each containing a group of tuples, with the id of an observation first and 
+    the pre-processed log line last, fitted by observation period.
 """
 def log_pre_processing(logger, log_lines):
     global tracking_time
@@ -121,7 +122,8 @@ Args:
     obs_list: List of tuples, with observation IDs and observation timestamp, in string form.
 
 Returns:
-    A list of lists, with each containing a group of headerless log lines, fitted by observation period with successful observations.
+    A list of lists, with each containing a group of headerless log lines, with the id of an observation first and 
+    the pre-processed log line last, fitted by observation period with successful observations.
 """
 def obs_filtering(logger, log_lines, obs_list):
     global tracking_time
@@ -363,24 +365,50 @@ if __name__ == '__main__':
     dest_arch_name = 'P005_data.txt'
 
     #### Log lines pre-processing  
-    headerless_logs_procesing = False
-    headerless_logs = None
-    if headerless_logs_procesing:
+    pre_processed_logs_procesing = True
+    pre_processed_logs = None
+
+    if pre_processed_logs_procesing:
         log_lines = open_txt_file('logs/wt1tcs.{0}.log'.format(date))
-        headerless_logs = log_pre_processing(logger, log_lines)
-        # Save headerless logs to file
+        pre_processed_logs = log_pre_processing(logger, log_lines)
+
+        # Save pre-processed logs to file
+        with open('mid_files/pre_processed_logs.txt', "w") as f:
+            for section_tuples in pre_processed_logs:
+                log_section = list(dict(section_tuples).values())
+                f.write("\t".join(log_section))
     else:
-        headerless_logs = []# Load from file
+        pre_processed_logs = []
+        
+        # Load from file
+        with open('mid_files/pre_processed_logs.txt') as f:
+            for log_section in f.readlines():
+                pre_processed_logs.append(log_section.split("\t"))
 
     #### Log lines' observation filtering
-    obs_arch_name = "wdb_query_{0}.csv".format(date)
-    obs_list = open_obs_file(obs_arch_name)
-    obs_logs = obs_filtering(logger, headerless_logs, obs_list)
+    obs_logs_procesing = True
+    obs_logs = None
+
+    if obs_logs_procesing:
+        obs_list = open_obs_file("wdb_query_{0}.csv".format(date))
+        obs_logs = obs_filtering(logger, pre_processed_logs, obs_list)
+
+        # Save observation logs to file
+        with open('mid_files/observation_logs.txt', "w") as f:
+            for section_tuples in obs_logs:
+                log_section = list(dict(section_tuples).values())
+                f.write("\t".join(log_section))
+    else:
+        obs_logs = []
+        
+        # Load from file
+        with open('mid_files/observation_logs.txt') as f:
+            for log_section in f.readlines():
+                obs_logs.append(log_section.split("\t"))
 
     #### Log lines parsing
     ### Templates extraction
-    tplt_arch_name = 'P005_templates.txt'
-    tplt_list = open_txt_file(tplt_arch_name)
+    tplt_list = open_txt_file('P005_templates.txt')
     parsed_data = log_parsing_regex(logger, obs_logs, tplt_list)
 
     #### Parsed data saving
