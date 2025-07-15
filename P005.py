@@ -5,7 +5,8 @@ import time
 import xml
 import logging
 import tracemalloc
-from ttp import ttp
+import pandas as pd
+#from ttp import ttp
 
 
 """
@@ -297,21 +298,29 @@ def log_parsing_regex(logger, log_sections, templates_list):
                     parser_res = parser.group()
 
                     # Parses a log line's date
-                    check_date = re.search(r"[0-2][0-9]{3}-[0-1][0-9]-[0-3][0-9]", parser_res)
-                    if(check_date is not None):
-                        result["date_body"] = check_date.group()
-                        parser_res = re.sub(r"[0-2][0-9]{3}-[0-1][0-9]-[0-3][0-9]", '', parser_res)
+                    check_forces = re.search(r"m1as m1asSetGlbRel", parser.group())
+                    if(check_forces is not None):
 
-                    # Parsees a log line's hour time
-                    check_time = re.search(r"[0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*", parser_res)
-                    if(check_time is not None):
-                        result["time_body"] = check_time.group()
-                        parser_res = re.sub(r"[0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*", '', parser_res)
-                    
-                    # Parsees a log line's numeric data
-                    check_numeric = re.findall(r"\s([0-9.-]+)", parser_res)
-                    if(check_numeric is not None):
-                        result["numberic_values"] = check_numeric
+                        check_f_dist = re.search(r"Forces", parser.group())
+                        if(check_f_dist is not None):
+                            result["attribute"] = "forces"
+                            result["label"] = "f_dist"
+                            result["date"] = parser.group(2)
+                            result["time"] = parser.group(3)
+                            result["data"] = parser.group(6)
+
+                        else:
+                            result["attribute"] = "forces"
+                            result["label"] = "f_id"
+                            result["date"] = parser.group(2)
+                            result["time"] = parser.group(3)
+                            result["data"] = parser.group(5)
+
+                    else:
+                        result["time"] = parser.group(2)
+                        result["attribute"] = parser.group(4)
+                        result["label"] = parser.group(5)
+                        result["data"] = parser.group(6)
 
                     # Save parsing result
                     result['Num_linea'] = index
@@ -336,6 +345,71 @@ def log_parsing_regex(logger, log_sections, templates_list):
     tracking_time = time.time()
 
     return parsed_data
+
+"""
+Classifies the parsed log lines
+
+Args:
+    parsed_data: List of dictionaries, each containing the log line dynamic parsed data
+
+Returns:
+    None
+"""
+def classify_parsed_lines(logger, parsed_data):
+    
+    df_f_dist = {
+        "ID_f_dist": [],
+        "force_1": [], "force_2": [], "force_3": [], "force_4": [], "force_5": [], "force_6": [], "force_7": [], "force_8": [], "force_9": [], "force_10": [], "force_11": [], "force_12": [], "force_13": [], "force_14": [], "force_15": [], "force_16": [], "force_17": [], "force_18": [], "force_19": [], "force_20": [], "force_21": [], "force_22": [], "force_23": [], "force_24": [], "force_25": [],
+        "force_26": [], "force_27": [], "force_28": [], "force_29": [], "force_30": [], "force_31": [], "force_32": [], "force_33": [], "force_34": [], "force_35": [], "force_36": [], "force_37": [], "force_38": [], "force_39": [], "force_40": [], "force_41": [], "force_42": [], "force_43": [], "force_44": [], "force_45": [], "force_46": [], "force_47": [], "force_48": [], "force_49": [], "force_50": [],
+        "force_51": [], "force_52": [], "force_53": [], "force_54": [], "force_55": [], "force_56": [], "force_57": [], "force_58": [], "force_59": [], "force_60": [], "force_61": [], "force_62": [], "force_63": [], "force_64": [], "force_65": [], "force_66": [], "force_67": [], "force_68": [], "force_69": [], "force_70": [], "force_71": [], "force_72": [], "force_73": [], "force_74": [], "force_75": [],
+        "force_76": [], "force_77": [], "force_78": [], "force_79": [], "force_80": [], "force_81": [], "force_82": [], "force_83": [], "force_84": [], "force_85": [], "force_86": [], "force_87": [], "force_88": [], "force_89": [], "force_90": [], "force_91": [], "force_92": [], "force_93": [], "force_94": [], "force_95": [], "force_96": [], "force_97": [], "force_98": [], "force_99": [], "force_100": [],
+        "force_101": [], "force_102": [], "force_103": [], "force_104": [], "force_105": [], "force_106": [], "force_107": [], "force_108": [], "force_109": [], "force_110": [], "force_111": [], "force_112": [], "force_113": [], "force_114": [], "force_115": [], "force_116": [], "force_117": [], "force_118": [], "force_119": [], "force_120": [], "force_121": [], "force_122": [], "force_123": [], "force_124": [], "force_125": [],
+        "force_126": [], "force_127": [], "force_128": [], "force_129": [], "force_130": [], "force_131": [], "force_132": [], "force_133": [], "force_134": [], "force_135": [], "force_136": [], "force_137": [], "force_138": [], "force_139": [], "force_140": [], "force_141": [], "force_142": [], "force_143": [], "force_144": [], "force_145": [], "force_146": [], "force_147": [], "force_148": [], "force_149": [], "force_150": []
+    }
+
+    df_additional_data = {
+        "attribute": [],
+        "label": [],
+        "data": []
+    }
+
+    k = 0
+    
+    # Parses a log line's date
+    for line in parsed_data:
+
+        if(line["attribute"] == "forces"):
+
+            if(line["label"] == "f_id"):
+                df_f_dist["ID_f_dist"].append(line["data"])
+
+            elif(line["label"] == "f_dist"):
+                
+                threshold_1 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_1"])
+                threshold_2 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_26"])
+                threshold_3 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_51"])
+                threshold_4 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_76"])
+                threshold_5 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_101"])
+                threshold_6 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_126"])
+
+                if threshold_1: k = 0
+                elif threshold_2: k = 25
+                elif threshold_3: k = 50
+                elif threshold_4: k = 75
+                elif threshold_5: k = 100
+                elif threshold_6: k = 125
+
+                for i in range(25):
+                    f_dist_content = line["data"].split()
+                    df_f_dist["force_{0}".format(i+k+1)].append(f_dist_content[i])
+
+
+        else:
+            df_additional_data["attribute"] = line["attribute"]
+            df_additional_data["label"] = line["label"]
+            df_additional_data["data"] = line["data"]
+
+    return df_f_dist, df_additional_data
 
 """
 Saves parsed data in an external file
