@@ -6,6 +6,7 @@ import xml
 import logging
 import tracemalloc
 import pandas as pd
+#from memory_profiler import profile
 #from ttp import ttp
 
 
@@ -30,8 +31,10 @@ def open_obs_file(arch_name):
     with open(arch_name, mode="r") as query:
         reader = csv.reader(query)
         
+        next(reader)
+
         for line in reader:
-            tpl_list.append((line[11], line[12].split("T")[1]))
+            tpl_list.append((line[10], line[11].split("T")[1]))
 
     tpl_list.pop(0)
 
@@ -165,38 +168,6 @@ def obs_filtering(logger, log_lines, obs_list):
 
 
 """
-In Development
-
-Args:
-
-Returns:
-
-"""
-def template_generator(logger, templates_list):
-    ### Checkpoint
-    logger.info('Inicio de generador de plantillas: {0}'.format(str(time.time() - tracking_time)))
-    tracking_time = time.time()
-
-    nu_template_list = []
-
-    for template in templates_list:
-        template_obj = {}
-
-        if(template.find("{{date_body}}") != -1):
-            template_obj['date_body'] = r"[0-2][0-9]{3}-[0-1][0-9]-[0-3][0-9]"
-            template = str.replace(template, "{{date_body}}", r"[0-2][0-9]{3}-[0-1][0-9]-[0-3][0-9]")
-
-        if(template.find("{{time_body}}") != -1):
-            template_obj['time_body'] = r"[0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*"
-            template = str.replace(template, "{{date_body}}", r"[0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*")
-            
-        template = re.sub(r"{{[0-9]+}}", r"[0-9.-]+", template, 1)
-
-
-    return nu_template_list
-
-
-"""
 Parsess each log line and extracts their dynamic data, using the Text Template Parsing library (ttp).
 
 Args:
@@ -295,10 +266,10 @@ def log_parsing_regex(logger, log_sections, templates_list):
                 # If match is true, the data extracted is saved and jumps into the next log line
                 if(parser is not None):
 
-                    parser_res = parser.group()
-
                     # Parses a log line's date
-                    check_forces = re.search(r"m1as m1asSetGlbRel", parser.group())
+                    check_forces = re.search(r"m1as m1asSetGlbAbs", parser.group())
+                    check_onecal = re.search(r"ONECAL", parser.group())
+
                     if(check_forces is not None):
 
                         check_f_dist = re.search(r"Forces", parser.group())
@@ -315,6 +286,10 @@ def log_parsing_regex(logger, log_sections, templates_list):
                             result["date"] = parser.group(2)
                             result["time"] = parser.group(3)
                             result["data"] = parser.group(5)
+
+                    elif(check_onecal is not None):
+                        result["time"] = parser.group(2)
+                        result["attribute"] = parser.group(4)
 
                     else:
                         result["time"] = parser.group(2)
@@ -356,9 +331,18 @@ Returns:
     None
 """
 def classify_parsed_lines(logger, parsed_data):
+    global tracking_time
+
+    ### Checkpoint - Start parsed lines classifier
+    logger.info('Start parsed lines classifier: {0}'.format(str(time.time() - tracking_time)))
+    tracking_time = time.time()
+
+    df_images = {
+        "img_path": []
+    }
     
     df_f_dist = {
-        "ID_f_dist": [],
+        "id_f_dist": [],
         "force_1": [], "force_2": [], "force_3": [], "force_4": [], "force_5": [], "force_6": [], "force_7": [], "force_8": [], "force_9": [], "force_10": [], "force_11": [], "force_12": [], "force_13": [], "force_14": [], "force_15": [], "force_16": [], "force_17": [], "force_18": [], "force_19": [], "force_20": [], "force_21": [], "force_22": [], "force_23": [], "force_24": [], "force_25": [],
         "force_26": [], "force_27": [], "force_28": [], "force_29": [], "force_30": [], "force_31": [], "force_32": [], "force_33": [], "force_34": [], "force_35": [], "force_36": [], "force_37": [], "force_38": [], "force_39": [], "force_40": [], "force_41": [], "force_42": [], "force_43": [], "force_44": [], "force_45": [], "force_46": [], "force_47": [], "force_48": [], "force_49": [], "force_50": [],
         "force_51": [], "force_52": [], "force_53": [], "force_54": [], "force_55": [], "force_56": [], "force_57": [], "force_58": [], "force_59": [], "force_60": [], "force_61": [], "force_62": [], "force_63": [], "force_64": [], "force_65": [], "force_66": [], "force_67": [], "force_68": [], "force_69": [], "force_70": [], "force_71": [], "force_72": [], "force_73": [], "force_74": [], "force_75": [],
@@ -368,9 +352,28 @@ def classify_parsed_lines(logger, parsed_data):
     }
 
     df_additional_data = {
+        "timestamp": [],
         "attribute": [],
         "label": [],
         "data": []
+    }
+
+    df_p_available = {
+        "piston_1": [], "piston_2": [], "piston_3": [], "piston_4": [], "piston_5": [], "piston_6": [], "piston_7": [], "piston_8": [], "piston_9": [], "piston_10": [], "piston_11": [], "piston_12": [], "piston_13": [], "piston_14": [], "piston_15": [], "piston_16": [], "piston_17": [], "piston_18": [], "piston_19": [], "piston_20": [], "piston_21": [], "piston_22": [], "piston_23": [], "piston_24": [], "piston_25": [],
+        "piston_26": [], "piston_27": [], "piston_28": [], "piston_29": [], "piston_30": [], "piston_31": [], "piston_32": [], "piston_33": [], "piston_34": [], "piston_35": [], "piston_36": [], "piston_37": [], "piston_38": [], "piston_39": [], "piston_40": [], "piston_41": [], "piston_42": [], "piston_43": [], "piston_44": [], "piston_45": [], "piston_46": [], "piston_47": [], "piston_48": [], "piston_49": [], "piston_50": [],
+        "piston_51": [], "piston_52": [], "piston_53": [], "piston_54": [], "piston_55": [], "piston_56": [], "piston_57": [], "piston_58": [], "piston_59": [], "piston_60": [], "piston_61": [], "piston_62": [], "piston_63": [], "piston_64": [], "piston_65": [], "piston_66": [], "piston_67": [], "piston_68": [], "piston_69": [], "piston_70": [], "piston_71": [], "piston_72": [], "piston_73": [], "piston_74": [], "piston_75": [],
+        "piston_76": [], "piston_77": [], "piston_78": [], "piston_79": [], "piston_80": [], "piston_81": [], "piston_82": [], "piston_83": [], "piston_84": [], "piston_85": [], "piston_86": [], "piston_87": [], "piston_88": [], "piston_89": [], "piston_90": [], "piston_91": [], "piston_92": [], "piston_93": [], "piston_94": [], "piston_95": [], "piston_96": [], "piston_97": [], "piston_98": [], "piston_99": [], "piston_100": [],
+        "piston_101": [], "piston_102": [], "piston_103": [], "piston_104": [], "piston_105": [], "piston_106": [], "piston_107": [], "piston_108": [], "piston_109": [], "piston_110": [], "piston_111": [], "piston_112": [], "piston_113": [], "piston_114": [], "piston_115": [], "piston_116": [], "piston_117": [], "piston_118": [], "piston_119": [], "piston_120": [], "piston_121": [], "piston_122": [], "piston_123": [], "piston_124": [], "piston_125": [],
+        "piston_126": [], "piston_127": [], "piston_128": [], "piston_129": [], "piston_130": [], "piston_131": [], "piston_132": [], "piston_133": [], "piston_134": [], "piston_135": [], "piston_136": [], "piston_137": [], "piston_138": [], "piston_139": [], "piston_140": [], "piston_141": [], "piston_142": [], "piston_143": [], "piston_144": [], "piston_145": [], "piston_146": [], "piston_147": [], "piston_148": [], "piston_149": [], "piston_150": []
+    }
+
+    dict_corrections = {
+        "timestamp": [],
+        "id_p_av" : [],
+        "id_f_dist_old": [],
+        "id_f_dist_new": [],
+        "id_img_old": [],
+        "id_img_new": []
     }
 
     k = 0
@@ -381,16 +384,16 @@ def classify_parsed_lines(logger, parsed_data):
         if(line["attribute"] == "forces"):
 
             if(line["label"] == "f_id"):
-                df_f_dist["ID_f_dist"].append(line["data"])
+                df_f_dist["id_f_dist"].append(int(line["data"]))
 
             elif(line["label"] == "f_dist"):
                 
-                threshold_1 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_1"])
-                threshold_2 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_26"])
-                threshold_3 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_51"])
-                threshold_4 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_76"])
-                threshold_5 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_101"])
-                threshold_6 = len(df_f_dist["ID_f_dist"]) > len(df_f_dist["force_126"])
+                threshold_2 = len(df_f_dist["id_f_dist"]) > len(df_f_dist["force_26"])
+                threshold_1 = len(df_f_dist["id_f_dist"]) > len(df_f_dist["force_1"])
+                threshold_3 = len(df_f_dist["id_f_dist"]) > len(df_f_dist["force_51"])
+                threshold_4 = len(df_f_dist["id_f_dist"]) > len(df_f_dist["force_76"])
+                threshold_5 = len(df_f_dist["id_f_dist"]) > len(df_f_dist["force_101"])
+                threshold_6 = len(df_f_dist["id_f_dist"]) > len(df_f_dist["force_126"])
 
                 if threshold_1: k = 0
                 elif threshold_2: k = 25
@@ -401,15 +404,65 @@ def classify_parsed_lines(logger, parsed_data):
 
                 for i in range(25):
                     f_dist_content = line["data"].split()
-                    df_f_dist["force_{0}".format(i+k+1)].append(f_dist_content[i])
+                    df_f_dist["force_{0}".format(i+k+1)].append(float(f_dist_content[i]))
+
+        elif(line["attribute"] == "ONECAL"):
+            dict_corrections["timestamp"].append(line["time"])
 
 
         else:
-            df_additional_data["attribute"] = line["attribute"]
-            df_additional_data["label"] = line["label"]
-            df_additional_data["data"] = line["data"]
+            df_additional_data["timestamp"].append(line["time"])
+            df_additional_data["attribute"].append(line["attribute"])
+            df_additional_data["label"].append(line["label"])
+            df_additional_data["data"].append(line["data"])
 
-    return df_f_dist, df_additional_data
+    ### Checkpoint - End parsed lines classifier
+    logger.info('End parsed lines classifier: {0}'.format(str(time.time() - tracking_time)))
+    tracking_time = time.time()
+
+    return pd.DataFrame(df_f_dist), pd.DataFrame(df_additional_data), dict_corrections
+
+
+"""
+Builds the relationships between df_corrections and the rest of the dataframes
+
+Args:
+    dict_corrections: Dictionary of timestamps of corrections
+    df_f_dist: Dataframe of force distributions
+
+Returns:
+    df_corrections: Dataframe of corrections' timestamps and related ids
+"""
+def relate_corrections(logger, dict_corrections, df_f_dist):
+    global tracking_time
+    
+    ### Checkpoint - Start relate corrections
+    logger.info('Start relate corrections: {0}'.format(str(time.time() - tracking_time)))
+    tracking_time = time.time()
+
+    f_dist_id_series = df_f_dist['id_f_dist']
+
+    length = len(dict_corrections["timestamp"])
+
+    #First correction
+    dict_corrections["id_f_dist_old"].append(-1)
+    dict_corrections["id_f_dist_new"].append(f_dist_id_series[0])
+
+    for i in range(1, length-1):
+        dict_corrections["id_f_dist_old"].append(f_dist_id_series[i-1])
+        dict_corrections["id_f_dist_new"].append(f_dist_id_series[i])
+
+    #Last correction
+    dict_corrections["id_f_dist_old"].append(f_dist_id_series[length-2])
+    dict_corrections["id_f_dist_new"].append(-1)
+
+    ### Checkpoint - End relate corrections
+    logger.info('End relate corrections: {0}'.format(str(time.time() - tracking_time)))
+    tracking_time = time.time()
+
+    #return pd.DataFrame(dict_corrections)
+    return dict_corrections
+
 
 """
 Saves parsed data in an external file
@@ -464,7 +517,7 @@ if __name__ == '__main__':
     obs_logs = None
 
     if obs_logs_procesing:
-        obs_list = open_obs_file("wdb_query_{0}.csv".format(date))
+        obs_list = open_obs_file("wdb_query_11740_eso.csv")
         obs_logs = obs_filtering(logger, pre_processed_logs, obs_list)
 
         # Save observation logs to file
@@ -481,10 +534,37 @@ if __name__ == '__main__':
                 obs_logs.append(log_section.split("\t"))
 
     #### Log lines parsing
-    ### Templates extraction
-    tplt_list = open_txt_file('P005_templates.txt')
-    parsed_data = log_parsing_regex(logger, obs_logs, tplt_list)
+    
+    log_parsing = True
+    parsed_data = None
+
+    if log_parsing:
+        tplt_list = open_txt_file('P005_templates.txt')
+        parsed_data = log_parsing_regex(logger, obs_logs, tplt_list)
+
+        # Save parsed data to file
+        with open('mid_files/parsed_data.txt', "w") as f:
+            for data_dict in parsed_data:
+                parsed_values = json.dumps(data_dict)
+                f.writelines(parsed_values+'\n')
+    else:
+        parsed_data = []
+        
+        # Load from file
+        with open('mid_files/observation_logs.txt') as f:
+            for data_dict in f.readlines():
+                parsed_data.append(data_dict.split("\t"))
 
     #### Parsed data saving
-    save_parsed_data(parsed_data, dest_arch_name)
+    #save_parsed_data(parsed_data, dest_arch_name) 
+
+    #### Parsed data classifier
+    df_f_dist, df_additional_data, dict_corrections = classify_parsed_lines(logger, parsed_data)
+
+    #### Parsed data relater
+    df_corrections = relate_corrections(logger, dict_corrections, df_f_dist)
+
+    print(df_f_dist)
+    print(df_additional_data)
+    print(df_corrections)
 
