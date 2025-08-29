@@ -305,8 +305,8 @@ def log_parsing_regex(logger, log_sections, templates_list):
                     elif(check_exp_no is not None):
                         result["time"] = parser.group(2)
                         result["group"] = "IMAGE"
-                        result["label"] = parser.group(4).replace(" ", "_")
-                        result["data"] = parser.group(5)
+                        result["label"] = parser.group(5)
+                        result["data"] = parser.group(4)
 
                     elif(check_inttime is not None):
                         result["time"] = parser.group(2)
@@ -422,24 +422,21 @@ def generate_dataframes(logger, parsed_data):
             dict_corrections["id_img_old"].append(None)
             dict_corrections["id_img_new"].append(None)
 
-        elif(line["group"] == "START" or line["group"] == "STOP"):
-            if len(dict_corrections.keys()) == 0:
-                dict_images["id_img"][0] = int(line["Num_linea"])
-                dict_images["exposition_start"][0] = line["time"] if line["group"] == "START" else None
-                dict_images["integration_time"][0] = None
-                dict_images["readout_start"][0] = line["time"] if line["group"] == "START" else None
-                dict_images["readout_stop"][0] = line["time"] if line["group"] == "STOP" else None
-                dict_images["ccd"][0] = line["data"]
-                dict_images["img_path"][0] = None
+        elif(line["group"] == "IMAGE"):
+            if(line["label"] == "INTTIME"):
+                dict_images["id_img"].append(None)
+                dict_images["exposition_start"].append(line["time"])
+                dict_images["integration_time"].append(line["data"])
+                dict_images["readout_start"].append(None)
+                dict_images["readout_stop"].append(None)
+                dict_images["ccd"].append(None)
+                dict_images["img_path"].append(None)
 
             else:
-                dict_images["id_img"].append(int(line["Num_linea"]))
-                dict_images["exposition_start"].append(line["time"] if line["group"] == "START" else None)
-                dict_images["integration_time"].append(None)
-                dict_images["readout_start"].append(line["time"] if line["group"] == "START" else None)
-                dict_images["readout_stop"].append(line["time"] if line["group"] == "STOP" else None)
-                dict_images["ccd"].append(line["data"])
-                dict_images["img_path"].append(None)
+                image_index = len(dict_images["id_img"]) - 1
+
+                dict_images["id_img"][image_index] = line["data"]
+                dict_images["ccd"][image_index] = line["label"]
 
         else:
             dict_additional_data["timestamp"].append(line["time"])

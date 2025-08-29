@@ -1,5 +1,5 @@
 (wt[1-4]tcs ([0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*)>-(ONECAL) (TEL) (ACTO))
-(wt[1-4]tcs ([0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*)> DET (EXP NO) = ([0-9]+))
+(wt[1-4]tcs ([0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*)> DET EXP NO = ([0-9]+) \/ Unique exposure ID number \[(lt[1-4]ia[a-c])\])
 (wt[1-4]tcs ([0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*)> TEL ACTO (INTTIME) = [0-9]+)
 (wt[1-4]tcs ([0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*)>-(START) DET (CHIP) (READ) \/ start readout of CCD chip \[(lt[1-4]ia[a-c])\])
 (wt[1-4]tcs ([0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*)>-(STOP) DET (CHIP) (READ) \/ stop readout of CCD chip \[(lt[1-4][a-z]{2}[a-c])\])
