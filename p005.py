@@ -1,3 +1,4 @@
+from astropy.io import fits
 import re
 import math
 import json
@@ -35,7 +36,8 @@ def open_obs_file(arch_name):
         next(reader)
 
         for line in reader:
-            tpl_list.append((line[10], line[11].split("T")[1]))
+            if(line[11] != ''):
+                tpl_list.append((line[10], line[11].split("T")[1]))
 
     tpl_list.pop(0)
 
@@ -262,19 +264,26 @@ def log_parsing_regex(logger, log_sections, templates_list):
                 template = template.replace("\n", "")
 
                 #Parsing with regular expressions
-                parser = re.search(template, line)
+                parser = re.search(template, line)                
 
                 # If match is true, the data extracted is saved and jumps into the next log line
                 if(parser is not None):
 
+                    #check_line_f_dist = re.search(r"SetGlbAbs", parser.group())
+                    #if(check_line_f_dist is not None):
+                    #    print(parser.group())
+
                     # Parses a log line's date
-                    check_forces = re.search(r"m1as m1asSetGlbAbs", parser.group())
+                    check_forces = re.search(r"SetGlbAbs", parser.group())
                     check_onecal = re.search(r"ONECAL", parser.group())
-                    check_start_read = re.search(r"START", parser.group())
+                    check_inttime = re.search(r"INTTIME", parser.group())
+                    check_exp_no= re.search(r"EXP NO", parser.group())
+                    
 
                     if(check_forces is not None):
 
                         check_f_dist = re.search(r"Forces", parser.group())
+                        
                         if(check_f_dist is not None):
                             result["group"] = "forces"
                             result["label"] = "f_dist"
@@ -293,9 +302,17 @@ def log_parsing_regex(logger, log_sections, templates_list):
                         result["time"] = parser.group(2)
                         result["group"] = parser.group(4)
 
-                    elif(check_start_read is not None):
+                    elif(check_exp_no is not None):
                         result["time"] = parser.group(2)
-                        result["group"] = parser.group(4)
+                        result["group"] = "IMAGE"
+                        result["label"] = parser.group(4).replace(" ", "_")
+                        result["data"] = parser.group(5)
+
+                    elif(check_inttime is not None):
+                        result["time"] = parser.group(2)
+                        result["group"] = "IMAGE"
+                        result["label"] = parser.group(4)
+                        result["data"] = parser.group(5)
 
                     else:
                         result["time"] = parser.group(2)
@@ -344,6 +361,12 @@ def generate_dataframes(logger, parsed_data):
     tracking_time = time.time()
 
     dict_images = {
+        "id_img": [],
+        "exposition_start": [],
+        "integration_time": [],
+        "readout_start": [],
+        "readout_stop": [],
+        "ccd": [],
         "img_path": []
     }
     
@@ -374,9 +397,6 @@ def generate_dataframes(logger, parsed_data):
         "id_img_old": [],
         "id_img_new": []
     }
-
-    # Image path index (for testing purposes only)
-    i = 0
     
     # Parses a log line's date
     for line in parsed_data:
@@ -402,10 +422,24 @@ def generate_dataframes(logger, parsed_data):
             dict_corrections["id_img_old"].append(None)
             dict_corrections["id_img_new"].append(None)
 
-        elif(line["group"] == "START"):
-            print(line)
-            dict_images["img_path"].append("PATH_{0}".format(i))
-            i += 1
+        elif(line["group"] == "START" or line["group"] == "STOP"):
+            if len(dict_corrections.keys()) == 0:
+                dict_images["id_img"][0] = int(line["Num_linea"])
+                dict_images["exposition_start"][0] = line["time"] if line["group"] == "START" else None
+                dict_images["integration_time"][0] = None
+                dict_images["readout_start"][0] = line["time"] if line["group"] == "START" else None
+                dict_images["readout_stop"][0] = line["time"] if line["group"] == "STOP" else None
+                dict_images["ccd"][0] = line["data"]
+                dict_images["img_path"][0] = None
+
+            else:
+                dict_images["id_img"].append(int(line["Num_linea"]))
+                dict_images["exposition_start"].append(line["time"] if line["group"] == "START" else None)
+                dict_images["integration_time"].append(None)
+                dict_images["readout_start"].append(line["time"] if line["group"] == "START" else None)
+                dict_images["readout_stop"].append(line["time"] if line["group"] == "STOP" else None)
+                dict_images["ccd"].append(line["data"])
+                dict_images["img_path"].append(None)
 
         else:
             dict_additional_data["timestamp"].append(line["time"])
@@ -458,6 +492,56 @@ def generate_dataframes(logger, parsed_data):
 
 
 """
+Builds the relationships between df_images and the images fit archives
+
+Args:
+    df_images: Dataframe of images
+
+Returns:
+    nu_df_images: Dataframe of images with corrected information
+"""
+def link_images(logger, ut, date, df_images):
+    global tracking_time
+    
+    ### Checkpoint - Start link images
+    logger.info('Start link images: {0}'.format(str(time.time() - tracking_time)))
+    tracking_time = time.time()
+
+    length = len(df_images["id_img"]) 
+
+    for i in range(length-1):
+        print(df_images.loc[i])
+
+        if(df_images.loc[i, "readout_start"] is not None):
+            file_path = "img_files/UT{0}_N{1}-ONEIA-{2}T{3}.fits".format(ut, df_images.loc[i, "ccd"][-1].upper(), date, df_images.loc[i, "exposition_start"].replace(":", "_"))
+
+            with fits.open(file_path) as hdul:
+                # Print information about the FITS file structure
+                hdul.info()
+
+                # Access the primary HDU
+                primary_hdu = hdul[0]
+
+                # Get the header information
+                header_info = primary_hdu.header
+                fits_exp_start = header_info['DATE-OBS']
+                fits_integration_time = header_info['EXPTIME']
+
+        
+    if(fits_exp_start == df_images.loc[i, "exposition_start"]):
+        df_images.loc[i, "exposition_start"] = fits_exp_start
+
+    if(fits_integration_time == df_images.loc[i, "integration_time"]):
+        df_images.loc[i, "integration_time"] = fits_integration_time
+
+    ### Checkpoint - End link images
+    logger.info('End link images: {0}'.format(str(time.time() - tracking_time)))
+    tracking_time = time.time()
+
+    return df_images
+
+
+"""
 Builds the relationships between df_corrections and the rest of the dataframes
 
 Args:
@@ -492,10 +576,10 @@ def link_dataframes(logger, df_corrections, df_f_dist, df_images):
         df_corrections.loc[i, "id_img_new"] = images_id_series[i]
 
     #Last correction
-    df_corrections.loc[length - 1, "id_f_dist_old"] = f_dist_id_series[length-2]
-    df_corrections.loc[length - 1, "id_f_dist_new"] = -1
-    df_corrections.loc[length - 1, "id_img_old"] = images_id_series[length-2]
-    df_corrections.loc[length - 1, "id_img_new"] = -1
+    #df_corrections.loc[length - 1, "id_f_dist_old"] = f_dist_id_series[length-2]
+    #df_corrections.loc[length - 1, "id_f_dist_new"] = -1
+    #df_corrections.loc[length - 1, "id_img_old"] = images_id_series[length-2]
+    #df_corrections.loc[length - 1, "id_img_new"] = -1
 
     ### Checkpoint - End link dataframes
     logger.info('End link dataframes: {0}'.format(str(time.time() - tracking_time)))
@@ -527,17 +611,27 @@ if __name__ == '__main__':
     logging.basicConfig(filename='P005.log', level=logging.INFO)
     logger = logging.getLogger('myLogger')
 
+    ### Import params
+    with open('params.json', 'r') as file:
+        params = json.load(file)
+
     ### Log date
-    date = '2024-09-20'
+    date = params["date"]
+    ### UT number
+    ut = params["ut"]
     ### Relative path of destination file for parsed data
-    dest_arch_name = 'P005_data.txt'
+    dest_arch_name = params["destination_filename"]
+    ### Relative path of template file
+    tplt_arch_name = params["template_filename"]
+    ### Relative path of observation csvs
+    obs_csv_name = params["observation_filename"]
 
     #### Log lines pre-processing  
     pre_processed_logs_procesing = True
     pre_processed_logs = None
 
     if pre_processed_logs_procesing:
-        log_lines = open_txt_file('logs/wt1tcs.{0}.log'.format(date))
+        log_lines = open_txt_file('logs/wt{0}tcs.{1}.log'.format(ut, date))
         pre_processed_logs = log_pre_processing(logger, log_lines)
 
         # Save pre-processed logs to file
@@ -558,7 +652,7 @@ if __name__ == '__main__':
     obs_logs = None
 
     if obs_logs_procesing:
-        obs_list = open_obs_file("wdb_query_11740_eso.csv")
+        obs_list = open_obs_file("obs_files/{0}.csv".format(obs_csv_name))
         obs_logs = obs_filtering(logger, pre_processed_logs, obs_list)
 
         # Save observation logs to file
@@ -580,7 +674,7 @@ if __name__ == '__main__':
     parsed_data = None
 
     if log_parsing:
-        tplt_list = open_txt_file('P005_templates.txt')
+        tplt_list = open_txt_file("{0}.txt".format(tplt_arch_name))
         parsed_data = log_parsing_regex(logger, obs_logs, tplt_list)
 
         # Save parsed data to file
@@ -602,6 +696,9 @@ if __name__ == '__main__':
     #### Parsed data classifier
     df_f_dist, df_additional_data, df_corrections, df_images = generate_dataframes(logger, parsed_data)
 
+    ### Linking df_images and fits files
+    #df_images = link_images(logger, ut, date, df_images)
+
     #### Parsed data relater
     df_corrections = link_dataframes(logger, df_corrections, df_f_dist, df_images)
 
@@ -609,4 +706,3 @@ if __name__ == '__main__':
     print(df_additional_data)
     print(df_corrections)
     print(df_images)
-
