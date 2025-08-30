@@ -23,7 +23,7 @@ tplt_arch_name = params["template_filename"]
 obs_csv_name = params["observation_filename"]
 
 
-log_lines = open_txt_file('mid_files\pre_processed_logs.txt')
+log_lines = open_txt_file('mid_files/pre_processed_logs.txt')
 
 in_readout_loop = 0
 

@@ -84,7 +84,7 @@ def log_pre_processing(logger, log_lines):
     for index, line in enumerate(log_lines):
         
         # Log line header removal
-        header_re = re.compile(r'([a-zA-Z]{3}\s[0-9]{2}\s[0-9]{2}:[0-9]{2}:[0-9]{2}?)\swt1tcs\s(.+)(\[[0-9]+\]):\s')
+        header_re = re.compile(r'([a-zA-Z]{3}\s[0-9]{2}\s[0-9]{2}:[0-9]{2}:[0-9]{2}?)\swt[1-4]tcs\s(.+)(\[[0-9]+\]):\s')
 
         headerless_line = re.sub(header_re, '', line)
 
@@ -112,12 +112,62 @@ def log_pre_processing(logger, log_lines):
             ### Checkpoint - Line added to current list
             logger.info('Line added to current list: {0}'.format(str(time.time() - tracking_time)))
             tracking_time = time.time()
+    
+    ### Second iteration: Recovers lines with AG.GUIDE boundaries timestamps that appear  outside the AG.GUIDE blocks
+    recovering_lines = []
+    prev_time = ""
+
+    for index, line in enumerate(log_lines):
+
+        # Log line header removal
+        header_re = re.compile(r'([a-zA-Z]{3}\s[0-9]{2}\s[0-9]{2}:[0-9]{2}:[0-9]{2}?)\swt[1-4]tcs\s(.+)(\[[0-9]+\]):\s')
+
+        headerless_line + re.sub(header_re, '', line)
+
+        for log_section in headerless_lines:
+            stop_time log_section[0][1]
+            start_line = log_section[-1][1]
+
+            time_re = re.compile(r'[0-2][0-9]:[0-5][0-9]:[0-5][0-9](.[0-9]+)*')
+
+            stop_time = re.search(time_re,stop_line).group()
+            start_time = re.search(time_re,start_line).group()
+
+            curr_time = re.search(time_re, line).group()
+
+            if(stop_time == curr_time or start_time == curr_time):
+                print(curr_time)
+
+                headerless_line = headerless_line.replace("  ", " ")
+
+                if(curr_time == prev_time):
+                    recovering_lines[-1].append(index, headerless_line))
+
+                elif(len(recovering_lines) == 0 or curr_time != prev_time):
+                    recovering_lines.append([(index, headerless_line)])
+                    prev_time = curr_time
+
+
+    print(recovering_lines)
+
+    ### WIP: Add recovering_lines into the final headerless_lines
+    final_lines = []
+
+    for reco_line in recovering_lines:
+        if(reco_line[0]):
+            buffer_list.append(reco_line[1])
+
+        else:
+            start_or_stop_flag = reco_line[0]
+            final_lines.append(buffer_list.reverse() + headerless_lines[])
+
+
 
     ### Checkpoint - End log pre-processing
     logger.info('End log pre-processing: {0}'.format(str(time.time() - tracking_time)))
     tracking_time = time.time()
 
-    return headerless_lines
+    return final_lines
 
 
 """
@@ -423,6 +473,7 @@ def generate_dataframes(logger, parsed_data):
             dict_corrections["id_img_new"].append(None)
 
         elif(line["group"] == "IMAGE"):
+
             if(line["label"] == "INTTIME"):
                 dict_images["id_img"].append(None)
                 dict_images["exposition_start"].append(line["time"])
@@ -435,8 +486,10 @@ def generate_dataframes(logger, parsed_data):
             else:
                 image_index = len(dict_images["id_img"]) - 1
 
-                dict_images["id_img"][image_index] = line["data"]
-                dict_images["ccd"][image_index] = line["label"]
+                if(image_index != -1):
+                    if (dict_images["exposition_start"][image_index] == line["time"]):
+                        dict_images["id_img"][image_index] = line["data"]
+                        dict_images["ccd"][image_index] = line["label"]
 
         else:
             dict_additional_data["timestamp"].append(line["time"])
@@ -646,24 +699,24 @@ if __name__ == '__main__':
 
     #### Log lines' observation filtering
     obs_logs_procesing = True
-    obs_logs = None
+    obs_logs = pre_processed_logs
 
-    if obs_logs_procesing:
-        obs_list = open_obs_file("obs_files/{0}.csv".format(obs_csv_name))
-        obs_logs = obs_filtering(logger, pre_processed_logs, obs_list)
+    #if obs_logs_procesing:
+        #obs_list = open_obs_file("obs_files/{0}.csv".format(obs_csv_name))
+        #obs_logs = obs_filtering(logger, pre_processed_logs, obs_list)
 
         # Save observation logs to file
-        with open('mid_files/observation_logs.txt', "w") as f:
-            for section_tuples in obs_logs:
-                log_section = list(dict(section_tuples).values())
-                f.write("\t".join(log_section))
-    else:
-        obs_logs = []
+        #with open('mid_files/observation_logs.txt', "w") as f:
+            #for section_tuples in obs_logs:
+                #log_section = list(dict(section_tuples).values())
+                #f.write("\t".join(log_section))
+    #else:
+        #obs_logs = []
         
         # Load from file
-        with open('mid_files/observation_logs.txt') as f:
-            for log_section in f.readlines():
-                obs_logs.append(log_section.split("\t"))
+        #with open('mid_files/observation_logs.txt') as f:
+            #for log_section in f.readlines():
+                #obs_logs.append(log_section.split("\t"))
 
     #### Log lines parsing
     
