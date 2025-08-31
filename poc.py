@@ -1,4 +1,5 @@
 from astropy.io import fits
+from datetime import datetime
 import re
 import math
 import json
@@ -88,30 +89,37 @@ def log_pre_processing(logger, log_lines):
 
         headerless_line = re.sub(header_re, '', line)
 
-        if(headerless_line.find("AG.GUIDE") != -1):
+        headerless_line = headerless_line.replace("  ", " ")
+        headerless_lines.append((index, headerless_line))
+
+        ### Checkpoint - Line added to current list
+        logger.info('Line added to current list: {0}'.format(str(time.time() - tracking_time)))
+        tracking_time = time.time()
+
+        #if(headerless_line.find("AG.GUIDE") != -1):
             ### Checkpoint - AG.GUIDE line found
-            logger.info('AG.GUIDE line found: {0}'.format(str(time.time() - tracking_time)))
-            tracking_time = time.time()
+            #logger.info('AG.GUIDE line found: {0}'.format(str(time.time() - tracking_time)))
+            #tracking_time = time.time()
 
-            if(headerless_line.find("STOP") != -1):
+            #if(headerless_line.find("STOP") != -1):
                 # Start log line extraction
-                headerless_lines.append([])
-                extraction_flag = True
+                #headerless_lines.append([])
+                #extraction_flag = True
 
-            elif(headerless_line.find("START") != -1):
+            #elif(headerless_line.find("START") != -1):
                 # Finish log line extraction
-                if(len(headerless_lines) != 0):
-                    headerless_lines[-1].append((index, headerless_line))
+                #if(len(headerless_lines) != 0):
+                    #headerless_lines[-1].append((index, headerless_line))
 
-                extraction_flag = False
+                #extraction_flag = False
 
-        if(extraction_flag): 
-            headerless_line = headerless_line.replace("  ", " ")
-            headerless_lines[-1].append((index, headerless_line))
+        #if(extraction_flag): 
+            #headerless_line = headerless_line.replace("  ", " ")
+            #headerless_lines[-1].append((index, headerless_line))
 
             ### Checkpoint - Line added to current list
-            logger.info('Line added to current list: {0}'.format(str(time.time() - tracking_time)))
-            tracking_time = time.time()
+            #logger.info('Line added to current list: {0}'.format(str(time.time() - tracking_time)))
+            #tracking_time = time.time()
     
     ### Checkpoint - End log pre-processing
     logger.info('End log pre-processing: {0}'.format(str(time.time() - tracking_time)))
@@ -254,89 +262,87 @@ def log_parsing_regex(logger, log_sections, templates_list):
 
     parsed_data = []
 
-    for log_section in log_sections:
-        for index, line in log_section:
-            result = {}
+    #for log_section in log_sections:    
+    for index, line in log_sections: 
+        result = {}
+            
+        #Iterates through all templates 
+        for template in templates_list: 
+            template = template.replace("\n", "")
+            #Parsing with regular expressions
+            parser = re.search(template, line)                
 
-            #Iterates through all templates
-            for template in templates_list:
+            # If match is true, the data extracted is saved and jumps into the next log line
+            if(parser is not None):
 
-                template = template.replace("\n", "")
+            #check_line_f_dist = re.search(r"SetGlbAbs", parser.group())
+            #if(check_line_f_dist is not None):
+                #    print(parser.group())
 
-                #Parsing with regular expressions
-                parser = re.search(template, line)                
-
-                # If match is true, the data extracted is saved and jumps into the next log line
-                if(parser is not None):
-
-                    #check_line_f_dist = re.search(r"SetGlbAbs", parser.group())
-                    #if(check_line_f_dist is not None):
-                    #    print(parser.group())
-
-                    # Parses a log line's date
-                    check_forces = re.search(r"SetGlbAbs", parser.group())
-                    check_onecal = re.search(r"ONECAL", parser.group())
-                    check_inttime = re.search(r"INTTIME", parser.group())
-                    check_exp_no= re.search(r"EXP NO", parser.group())
+                # Parses a log line's date
+                check_forces = re.search(r"SetGlbAbs", parser.group())
+                check_onecal = re.search(r"ONECAL", parser.group())
+                check_inttime = re.search(r"INTTIME", parser.group())
+                check_exp_no= re.search(r"EXP NO", parser.group())
                     
 
-                    if(check_forces is not None):
+                if(check_forces is not None):
 
-                        check_f_dist = re.search(r"Forces", parser.group())
+                    check_f_dist = re.search(r"Forces", parser.group())
                         
-                        if(check_f_dist is not None):
-                            result["group"] = "forces"
-                            result["label"] = "f_dist"
-                            result["date"] = parser.group(2)
-                            result["time"] = parser.group(3)
-                            result["data"] = parser.group(6)
-
-                        else:
-                            result["group"] = "forces"
-                            result["label"] = "f_id"
-                            result["date"] = parser.group(2)
-                            result["time"] = parser.group(3)
-                            result["data"] = parser.group(5)
-
-                    elif(check_onecal is not None):
-                        result["time"] = parser.group(2)
-                        result["group"] = parser.group(4)
-
-                    elif(check_exp_no is not None):
-                        result["time"] = parser.group(2)
-                        result["group"] = "IMAGE"
-                        result["label"] = parser.group(5)
-                        result["data"] = parser.group(4)
-
-                    elif(check_inttime is not None):
-                        result["time"] = parser.group(2)
-                        result["group"] = "IMAGE"
-                        result["label"] = parser.group(4)
-                        result["data"] = parser.group(5)
-
-                    else:
-                        result["time"] = parser.group(2)
-                        result["group"] = parser.group(4)
-                        result["label"] = parser.group(5)
+                    if(check_f_dist is not None):
+                        result["group"] = "forces"
+                        result["label"] = "f_dist"
+                        result["date"] = parser.group(2)
+                        result["time"] = parser.group(3)
                         result["data"] = parser.group(6)
 
-                    # Save parsing result
-                    result['Num_linea'] = index
-                    parsed_data.append(result)
-                    break
+                    else:
+                        result["group"] = "forces"
+                        result["label"] = "f_id"
+                        result["date"] = parser.group(2)
+                        result["time"] = parser.group(3)
+                        result["data"] = parser.group(5)
 
-                ### Checkpoint - Log line parsing attempt
-                logger.info('Log line parsing attempt: {0}'.format(str(time.time() - tracking_time)))
-                tracking_time = time.time()
+                elif(check_onecal is not None):
+                    result["time"] = parser.group(2)
+                    result["group"] = parser.group(4)
 
+                elif(check_exp_no is not None):
+                    result["time"] = parser.group(2)
+                    result["group"] = "IMAGE"
+                    result["label"] = parser.group(5)
+                    result["data"] = parser.group(4)
 
-            ### Checkpoint - End iteration on template list
-            logger.info('End iteration on template list: {0}'.format(str(time.time() - tracking_time)))
+                elif(check_inttime is not None):
+                    result["time"] = parser.group(2)
+                    result["group"] = "IMAGE"
+                    result["label"] = parser.group(4)
+                    result["data"] = parser.group(5)
+
+                else:
+                    result["time"] = parser.group(2)
+                    result["group"] = parser.group(4)
+                    result["label"] = parser.group(5)
+                    result["data"] = parser.group(6)
+
+                # Save parsing result
+                result['Num_linea'] = index
+                parsed_data.append(result)
+                break
+
+            ### Checkpoint - Log line parsing attempt
+            logger.info('Log line parsing attempt: {0}'.format(str(time.time() - tracking_time)))
             tracking_time = time.time()
 
-        ### Checkpoint - End iteration on log line group 
-        logger.info('End iteration on log line group: {0}'.format(str(time.time() - tracking_time)))
+
+        ### Checkpoint - End iteration on template list
+        logger.info('End iteration on template list: {0}'.format(str(time.time() - tracking_time)))
         tracking_time = time.time()
+
+        ### Checkpoint - End iteration on log line group 
+        #logger.info('End iteration on log line group: {0}'.format(str(time.time() - tracking_time)))
+        #tracking_time = time.time()
 
     ### Checkpoint - End log line parsing
     logger.info('End log line parsing: {0}'.format(str(time.time() - tracking_time)))
@@ -372,7 +378,8 @@ def generate_dataframes(logger, parsed_data):
     
     dict_f_dist = {
         "id_f_dist": [],
-        "forces": []
+        "forces": [],
+        "timestamp": []
     }
 
     dict_additional_data = {
@@ -406,16 +413,18 @@ def generate_dataframes(logger, parsed_data):
             if(line["label"] == "f_id"):
                 dict_f_dist["id_f_dist"].append(int(line["data"]))
                 dict_f_dist["forces"].append([])
+                dict_f_dist["timestamp"].append(datetime.strptime(line["time"].split(".")[0], "%H:%M:%S"))
 
             elif(line["label"] == "f_dist"):
                 f_dist_index = len(dict_f_dist["id_f_dist"]) - 1
                 f_dist_content = line["data"].split()
 
-                for force in f_dist_content:
-                    dict_f_dist["forces"][f_dist_index].append(float(force))
+                if(f_dist_index >= 0):
+                    for force in f_dist_content:
+                        dict_f_dist["forces"][f_dist_index].append(float(force))
 
         elif(line["group"] == "ONECAL"):
-            dict_corrections["timestamp"].append(line["time"])
+            dict_corrections["timestamp"].append(datetime.strptime(line["time"], "%H:%M:%S"))
             dict_corrections["id_p_av"].append(None)
             dict_corrections["id_f_dist_old"].append(None)
             dict_corrections["id_f_dist_new"].append(None)
@@ -426,7 +435,7 @@ def generate_dataframes(logger, parsed_data):
 
             if(line["label"] == "INTTIME"):
                 dict_images["id_img"].append(None)
-                dict_images["exposition_start"].append(line["time"])
+                dict_images["exposition_start"].append(datetime.strptime(line["time"], "%H:%M:%S"))
                 dict_images["integration_time"].append(line["data"])
                 dict_images["readout_start"].append(None)
                 dict_images["readout_stop"].append(None)
@@ -437,12 +446,12 @@ def generate_dataframes(logger, parsed_data):
                 image_index = len(dict_images["id_img"]) - 1
 
                 if(image_index != -1):
-                    if (dict_images["exposition_start"][image_index] == line["time"]):
+                    if (dict_images["exposition_start"][image_index] == datetime.strptime(line["time"], "%H:%M:%S")):
                         dict_images["id_img"][image_index] = line["data"]
                         dict_images["ccd"][image_index] = line["label"]
 
         else:
-            dict_additional_data["timestamp"].append(line["time"])
+            dict_additional_data["timestamp"].append(datetime.strptime(line["time"], "%H:%M:%S"))
             dict_additional_data["group"].append(line["group"])
             dict_additional_data["label"].append(line["label"])
 
@@ -558,22 +567,65 @@ def link_dataframes(logger, df_corrections, df_f_dist, df_images):
     logger.info('Start link dataframes: {0}'.format(str(time.time() - tracking_time)))
     tracking_time = time.time()
 
-    f_dist_id_series = df_f_dist['id_f_dist']
-    images_id_series = df_images['id_image']
+    halfday = datetime.strptime("12:00:00", "%H:%M:%S")
 
-    length = len(df_corrections["timestamp"])
+    num_corrections = len(df_corrections["id_corr"])
 
-    #First correction
-    df_corrections.loc[0, "id_f_dist_old"] = -1
-    df_corrections.loc[0, "id_f_dist_new"] = f_dist_id_series[0]
-    df_corrections.loc[0, "id_img_old"] = -1
-    df_corrections.loc[0, "id_img_new"] = images_id_series[0]
+    for index in range(num_corrections):
+        print(index)
 
-    for i in range(1, length-1):
-        df_corrections.loc[i, "id_f_dist_old"] = f_dist_id_series[i-1]
-        df_corrections.loc[i, "id_f_dist_new"] = f_dist_id_series[i]
-        df_corrections.loc[i, "id_img_old"] = images_id_series[i-1]
-        df_corrections.loc[i, "id_img_new"] = images_id_series[i]
+        # Link with forces distribution
+        max_f_time = datetime.strptime("00:00:00", "%H:%M:%S")
+
+        for f_time in df_f_dist["timestamp"].values:
+            print(f_time)
+
+            if(
+                (f_time < df_corrections.loc[index, "timestamp"] and f_time > halfday) or
+                (f_time < df_corrections.loc[index, "timestamp"] and f_time < halfday)
+            ):
+                max_f_time = f_time
+
+            else:
+                if(max_f_time == datetime.strptime("00:00:00", "%H:%M:%S")):
+                    after_index = df_f_dist["timestamp"].tolist().index(f_time)
+                
+                    df_corrections.loc[index, "id_f_dist_old"] = -1
+                    df_corrections.loc[index, "id_f_dist_new"] = df_f_dist.loc[after_index, "id_f_dist"]
+                
+                else:
+                    before_index = df_f_dist["timestamp"].tolist().index(max_f_time)
+                    after_index = df_f_dist["timestamp"].tolist().index(f_time)
+
+                    df_corrections.loc[index, "id_f_dist_old"] = df_f_dist.loc[before_index, "id_f_dist"]
+                    df_corrections.loc[index, "id_f_dist_new"] = df_f_dist.loc[after_index, "id_f_dist"]
+
+                break
+
+        # Link with images
+        max_img_time = datetime.strptime("00:00:00", "%H:%M:%S")
+        
+        for img_time in df_images["exposition_start"].values:
+
+            if(img_time < df_corrections.loc[index, "timestamp"]):
+                max_img_time = img_time
+
+            else:
+                if(max_img_time == datetime.strptime("00:00:00", "%H:%M:%S")):
+                    after_index = df_images["exposition_start"].tolist().index(img_time)
+                    
+                    df_corrections.loc[index, "id_img_old"] = -1
+                    df_corrections.loc[index, "id_img_new"] = df_images.loc[after_index, "id_img"]
+                
+                else:
+                    before_index = df_images["exposition_start"].tolist().index(max_img_time)
+                    after_index = df_images["exposition_start"].tolist().index(img_time)
+                
+                    df_corrections.loc[index, "id_img_old"] = df_images.loc[before_index, "id_img"]
+                    df_corrections.loc[index, "id_img_new"] = df_images.loc[after_index, "id_img"]
+
+                break
+
 
     #Last correction
     #df_corrections.loc[length - 1, "id_f_dist_old"] = f_dist_id_series[length-2]
@@ -636,9 +688,11 @@ if __name__ == '__main__':
 
         # Save pre-processed logs to file
         with open('mid_files/pre_processed_logs.txt', "w") as f:
-            for section_tuples in pre_processed_logs:
-                log_section = list(dict(section_tuples).values())
-                f.write("\t".join(log_section))
+            #for section_tuples in pre_processed_logs:
+                #log_section = list(dict(section_tuples).values())
+                #f.write("\t".join(log_section))
+            for log_tuple in pre_processed_logs:
+                f.write(log_tuple[1])
     else:
         pre_processed_logs = []
         
@@ -686,8 +740,9 @@ if __name__ == '__main__':
         parsed_data = []
         
         # Load from file
-        with open('mid_files/observation_logs.txt') as f:
+        with open('mid_files/parsed_data.txt') as f:
             for data_dict in f.readlines():
+                print(data_dict.split("\t"))
                 parsed_data.append(data_dict.split("\t"))
 
     #### Parsed data saving
@@ -702,7 +757,17 @@ if __name__ == '__main__':
     #### Parsed data relater
     df_corrections = link_dataframes(logger, df_corrections, df_f_dist, df_images)
 
+
+    df_f_dist.to_csv("dataframes/df_f_dist.csv", index=False)
+    df_additional_data.to_csv("dataframes/df_additional_data.csv", index=False)
+    df_corrections.to_csv("dataframes/df_corrections.csv", index=False)
+    df_images.to_csv("dataframes/df_images.csv", index=False)
+
     print(df_f_dist)
     print(df_additional_data)
     print(df_corrections)
     print(df_images)
+
+    df_alt_az = df_additional_data.groupby("label").get_group(" ")
+    df_alt_az.to_csv("dataframes/df_alt_az.csv", index=False)
+    print(df_alt_az)

@@ -1,6 +1,6 @@
 {
-    "date" : "2025-08-04",
-    "ut" : "1",
+    "date" : "2025-08-02",
+    "ut" : "2",
     "destination_filename" : "P005_data",
     "template_filename" : "P005_templates",
     "observation_filename" : "wdb_query_925263_eso"

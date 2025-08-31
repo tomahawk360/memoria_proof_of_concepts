@@ -21,9 +21,9 @@ obs_csv_name = params["observation_filename"]
 #       check_start_read = re.search(r"START", parser.group())
 #       if(check_start_read is not None): En vez de example_img, usar la linea de estas iteraciones
 
-example_img = {"time": "03:21:49", "group": "START", "data": "lt1iaa", "Num_linea": 101346}
+example_img = {"time": "03:27:43", "group": "START", "data": "lt1iab", "Num_linea": 101346}
 
-file_path = "img_files/UT{0}_N{1}-ONEIA-{2}T{3}.fits".format(1, example_img["data"][-1].upper(), '2025-08-05', example_img["time"].replace(":", "_"))
+file_path = "img_files/UT{0}_N{1}-ONEIA-{2}T{3}.fits".format(2, example_img["data"][-1].upper(), '2025-08-03', example_img["time"].replace(":", "-"))
 
 
 with fits.open(file_path) as hdul:
