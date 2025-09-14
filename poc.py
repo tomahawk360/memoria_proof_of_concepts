@@ -1,5 +1,5 @@
 from astropy.io import fits
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import math
 import json
@@ -7,8 +7,11 @@ import csv
 import time
 import xml
 import logging
-import tracemalloc
 import pandas as pd
+import requests
+import csv
+from io import StringIO
+from email.mime.multipart import MIMEMultipart
 #from memory_profiler import profile
 #from ttp import ttp
 
@@ -61,6 +64,197 @@ def open_txt_file(arch_name):
 
 
 """
+Fetch the VLT Observations CSV file from the ESO raw database and saves it in the obs_files folder
+Args:
+    arch_name: CSV file relative path.
+
+Returns:
+    A list of tuples, with each tuple containing the observation ID and it's respective timestamp.
+"""
+def fetch_obs_file(destination_folder, obs_date):
+    url = 'https://archive.eso.org/wdb/wdb/eso/eso_archive_main/query'
+
+    header = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:142.0) Gecko/20100101 Firefox/142.0",
+        "Referer": "https://archive.eso.org/eso/eso_archive_main.html"
+    }
+
+    payload = {
+        "wdbo": (None, "csv/download"),
+        "max_rows_returned": (None, "999999"),
+        "instrument": (None, ""),
+        "tab_object": (None, "on"),
+        "target": (None, ""),
+        "resolver": (None, "simbad"),
+        "ra": (None, ""),
+        "dec": (None, ""),
+        "box": (None, "00 10 00"),
+        "degrees_or_hours": (None, "hours"),
+        "tab_target_coord": (None, "on"),
+        "format": (None, "SexaHour"),
+        "wdb_input_file": (None, ""),
+        "night": (None, obs_date),
+        "stime": (None, ""),
+        "starttime": (None, "12"),
+        "etime": (None, ""),
+        "endtime": (None, "12"),
+        "tab_prog_id": (None, "on"),
+        "prog_id": (None, ""),
+        "gto": (None, ""),
+        "pi_coi": (None, ""),
+        "obs_mode": (None, ""),
+        "title": (None, ""),
+        "image[]": (None, "EFOSC;'IMA%'"),
+        "image[]": (None, "EMMI;'IMA%'"),
+        "image[]": (None, "ERIS"),
+        "image[]": (None, "FORS1;'IMA%'"),
+        "image[]": (None, "FORS2;'IMA%'"),
+        "image[]": (None, "HAWKI;'IMA%'"),
+        "image[]": (None, "GROND"),
+        "image[]": (None, "ISAAC;'IMA%'"),
+        "image[]": (None, "NAOS+CONICA;'IMA%','SDI%'"),
+        "image[]": (None, "OMEGACAM"),
+        "image[]": (None, "SOFI;'IMA%'"),
+        "image[]": (None, "SPHERE;'IMA%'"),
+        "image[]": (None, "SUSI"),
+        "image[]": (None, "TIMMI;'IMA%'"),
+        "image[]": (None, "VIMOS;'IMA%'"),
+        "image[]": (None, "VIRCAM"),
+        "image[]": (None, "VISIR;'IMA%'"),
+        "image[]": (None, "WFI"),
+        "image[]": (None, "XSHOOTER;'IMA%'"),
+        "spectrum[]": (None, "CES"),
+        "spectrum[]": (None, "CRIRE;'SPECTRUM%'"),
+        "spectrum[]": (None, "EFOSC;'SPECTRUM%'"),
+        "spectrum[]": (None, "EMMI;'SPECTRUM%','ECHELLE%','MOS%'"),
+        "spectrum[]": (None, "ERIS;'IFU%','%LSS%'"),
+        "spectrum[]": (None, "ESPRESSO"),
+        "spectrum[]": (None, "FEROS"),
+        "spectrum[]": (None, "FORS1;'SPECTRUM%','MOS%','IMAGE_SPECTRUM%'"),
+        "spectrum[]": (None, "FORS2;'SPECTRUM%','ECHELLE%','MOS%','MXU%','HIT%','IMAGE_SPECTRUM%'"),
+        "spectrum[]": (None, "GIRAF"),
+        "spectrum[]": (None, "HARPS"),
+        "spectrum[]": (None, "ISAAC;'SPECTRUM%'"),
+        "spectrum[]": (None, "KMOS"),
+        "spectrum[]": (None, "MUSE"),
+        "spectrum[]": (None, "NAOS+CONICA;'SPECTRUM%'"),
+        "spectrum[]": (None, "NIRPS"),
+        "spectrum[]": (None, "SINFO"),
+        "spectrum[]": (None, "SOFI;'SPECTRUM%'"),
+        "spectrum[]": (None, "SPHERE;'IFU%','SPECTRUM%'"),
+        "spectrum[]": (None, "TIMMI;'SPECTRUM%'"),
+        "spectrum[]": (None, "UVES"),
+        "spectrum[]": (None, "VIMOS;'IFU%','MOS%'"),
+        "spectrum[]": (None, "VISIR;'SPECTRUM%','ECHELLE%'"),
+        "spectrum[]": (None, "SHOOT"),
+        "vlti[]": (None, "AMBER"),
+        "vlti[]": (None, "GRAVITY"),
+        "vlti[]": (None, "MATISSE"),
+        "vlti[]": (None, "MIDI"),
+        "vlti[]": (None, "PIONIER"),
+        "vlti[]": (None, "VINCI"),
+        "polarim[]": (None, "EFOSC;'POLARIM%'"),
+        "polarim[]": (None, "FORS1;'POLARIM%'"),
+        "polarim[]": (None, "FORS2;'POLARIM%'"),
+        "polarim[]": (None, "ISAAC;'POLARIM%'"),
+        "polarim[]": (None, "NAOS+CONICA;'POLARIM%'"),
+        "polarim[]": (None, "SOFI;'POLARIM%'"),
+        "polarim[]": (None, "SPHERE;'POLARIM%'"),
+        "corono[]": (None, "EFOSC;'%CORO%'"),
+        "corono[]": (None, "ERIS;'CORO%'"),
+        "corono[]": (None, "NAOS+CONICA;'%CORO%'"),
+        "corono[]": (None, "SPHERE;'%CORO%'"),
+        "corono[]": (None, "VISIR;'%CORO%'"),
+        "other[]": (None, "ALPACA"),
+        "other[]": (None, "APICAM"),
+        "other[]": (None, "APEXBOL"),
+        "other[]": (None, "APEXHET"),
+        "other[]": (None, "FAIM6"),
+        "other[]": (None, "FAIM7"),
+        "other[]": (None, "GRIPS19"),
+        "other[]": (None, "LGSF"),
+        "other[]": (None, "MAD"),
+        "other[]": (None, "MASCOT"),
+        "other[]": (None, "SPECU"),
+        "other[]": (None, "WFCAM"),
+        "sam[]": (None, "ERIS;'%SAM%'"),
+        "sam[]": (None, "NAOS+CONICA;'%SAM%'"),
+        "sam[]": (None, "SPHERE;'%SAM%'"),
+        "sam[]": (None, "VISIR;'SAM%'"),
+        "tab_dp_cat": (None, "on"),
+        "dp_cat": (None, "SCIENCE"),
+        "dp_cat": (None, "ACQUISITION"),
+        "tab_dp_type": (None, "on"),
+        "dp_type": (None, ""),
+        "dp_type_user": (None, ""),
+        "tab_dp_tech": (None, "on"),
+        "dp_tech": (None, ""),
+        "dp_tech_user": (None, ""),
+        "tab_dp_id": (None, "on"),
+        "dp_id": (None, ""),
+        "origfile": (None, ""),
+        "tab_rel_date": (None, "on"),
+        "rel_date": (None, ""),
+        "obs_name": (None, ""),
+        "ob_id": (None, ""),
+        "tab_tpl_start": (None, "on"),
+        "tpl_start": (None, ""),
+        "tab_tpl_id": (None, "on"),
+        "tpl_id": (None, ""),
+        "tab_exptime": (None, "on"),
+        "exptime": (None, ""),
+        "tab_filter_path": (None, "on"),
+        "filter_path": (None, ""),
+        "tab_wavelength_input": (None, "on"),
+        "wavelength_input": (None, ""),
+        "tab_fwhm_input": (None, "on"),
+        "fwhm_input": (None, ""),
+        "gris_path": (None, ""),
+        "grat_path": (None, ""),
+        "slit_path": (None, ""),
+        "tab_instrument": (None, "on"),
+        "add": (None, "((ins_id like 'EFOSC%' AND (dp_tech like 'IMA%')) or (ins_id like 'EMMI%' AND (dp_tech like 'IMA%')) or (ins_id like 'ERIS%') or (ins_id like ('ERIS%') AND ((dp_tech like 'IMA%') AND (dp_tech not like '%SAM%'))) or (ins_id like 'FORS1%' AND (dp_tech like 'IMA%')) or (ins_id like 'FORS2%' AND (dp_tech like 'IMA%')) or (ins_id like 'HAWKI%' AND (dp_tech like 'IMA%')) or (ins_id like 'GROND%') or (ins_id like 'ISAAC%' AND (dp_tech like 'IMA%')) or (ins_id like 'NAOS+CONICA%' AND (dp_tech like 'IMA%' OR dp_tech like 'SDI%')) or (ins_id like 'OMEGACAM%') or (ins_id like 'SOFI%' AND (dp_tech like 'IMA%')) or (ins_id like 'SPHERE%' AND (dp_tech like 'IMA%')) or (ins_id like 'SUSI%') or (ins_id like 'TIMMI%' AND (dp_tech like 'IMA%')) or (ins_id like 'VIMOS%' AND (dp_tech like 'IMA%')) or (ins_id like 'VIRCAM%') or (ins_id like 'VISIR%' AND (dp_tech like 'IMA%')) or (ins_id like 'WFI%') or (ins_id like 'XSHOOTER%' AND (dp_tech like 'IMA%')) or (ins_id like 'CES%') or (ins_id like 'CRIRE%' AND ((dp_tech like 'SPECTRUM%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'EFOSC%' AND ((dp_tech like 'SPECTRUM%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'EMMI%' AND ((dp_tech like 'SPECTRUM%' OR dp_tech like 'ECHELLE%' OR dp_tech like 'MOS%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'ERIS%' AND ((dp_tech like 'IFU%' OR dp_tech like '%LSS%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'ESPRESSO%') or (ins_id like 'FEROS%') or (ins_id like 'FORS1%' AND ((dp_tech like 'SPECTRUM%' OR dp_tech like 'MOS%' OR dp_tech like 'IMAGE_SPECTRUM%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'FORS2%' AND ((dp_tech like 'SPECTRUM%' OR dp_tech like 'ECHELLE%' OR dp_tech like 'MOS%' OR dp_tech like 'MXU%' OR dp_tech like 'HIT%' OR dp_tech like 'IMAGE_SPECTRUM%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'GIRAF%') or (ins_id like 'HARPS%') or (ins_id like 'ISAAC%' AND ((dp_tech like 'SPECTRUM%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'KMOS%') or (ins_id like 'MUSE%') or (ins_id like 'NAOS+CONICA%' AND ((dp_tech like 'SPECTRUM%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'NIRPS%') or (ins_id like 'SINFO%') or (ins_id like 'SOFI%' AND ((dp_tech like 'SPECTRUM%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'SPHERE%' AND ((dp_tech like 'IFU%' OR dp_tech like 'SPECTRUM%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'TIMMI%' AND ((dp_tech like 'SPECTRUM%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'UVES%') or (ins_id like 'VIMOS%' AND ((dp_tech like 'IFU%' OR dp_tech like 'MOS%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'VISIR%' AND ((dp_tech like 'SPECTRUM%' OR dp_tech like 'ECHELLE%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'SHOOT%') or (ins_id in ('SHOOT','XSHOOTER') AND ((dp_tech like 'ECHELLE%') OR (dp_cat != 'SCIENCE'))) or (ins_id like 'AMBER%') or (ins_id like 'GRAVITY%') or (ins_id like 'MATISSE%') or (ins_id like 'MIDI%') or (ins_id like 'PIONIER%') or (ins_id like 'VINCI%') or (ins_id like 'EFOSC%' AND (dp_tech like 'POLARIM%')) or (ins_id like 'FORS1%' AND (dp_tech like 'POLARIM%')) or (ins_id like 'FORS2%' AND (dp_tech like 'POLARIM%')) or (ins_id like 'ISAAC%' AND (dp_tech like 'POLARIM%')) or (ins_id like 'NAOS+CONICA%' AND (dp_tech like 'POLARIM%')) or (ins_id like 'SOFI%' AND (dp_tech like 'POLARIM%')) or (ins_id like 'SPHERE%' AND (dp_tech like 'POLARIM%')) or (ins_id like 'EFOSC%' AND (dp_tech like '%CORO%')) or (ins_id like 'ERIS%' AND (dp_tech like 'CORO%')) or (ins_id like 'NAOS+CONICA%' AND (dp_tech like '%CORO%')) or (ins_id like 'SPHERE%' AND (dp_tech like '%CORO%')) or (ins_id like 'VISIR%' AND (dp_tech like '%CORO%')) or (ins_id like 'ALPACA%') or (ins_id like 'APICAM%') or (ins_id like 'APEXBOL%') or (ins_id like 'APEXHET%') or (ins_id like 'FAIM6%') or (ins_id like 'FAIM7%') or (ins_id like 'GRIPS19%') or (ins_id like 'LGSF%') or (ins_id like 'MAD%') or (ins_id like 'MASCOT%') or (ins_id like 'SPECU%') or (ins_id like 'WFCAM%') or (ins_id like 'ERIS%' AND (dp_tech like '%SAM%')) or (ins_id like 'NAOS+CONICA%' AND (dp_tech like '%SAM%')) or (ins_id like 'SPHERE%' AND (dp_tech like '%SAM%')) or (ins_id like 'VISIR%' AND (dp_tech like 'SAM%')))"),
+        "tab_tel_airm_start": (None, "on"),
+        "tab_stat_instrument": (None, "on"),
+        "tab_ambient": (None, "on"),
+        "tab_stat_exptime": (None, "on"),
+        "tab_HDR": (None, "on"),
+        "tab_mjd_obs": (None, "on"),
+        "aladin_colour": (None, "aladin_instrument"),
+        "tab_stat_plot": (None, "on"),
+        "order": (None, "")
+    }
+
+    # Make a POST request with data
+    response = requests.post(url, files=payload, headers=header)
+
+    # Access the response body as CSV
+    if response.status_code == 200:
+        obs_csv_list = []
+
+        csv_data = StringIO(response.text)
+        reader = csv.reader(csv_data)
+
+        for row in reader:
+            if(len(row) > 1):
+                obs_csv_list.append(row)
+
+        with open("{0}/{1}.csv".format(destination_folder, obs_date), 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+
+            # Write the header row
+            writer.writerow(obs_csv_list[0])
+
+            # Write the remaining data rows
+            writer.writerows(obs_csv_list[1:])
+        
+    else:
+        print("Error while fetching observation csv ", response.status_code)
+
+    return response.status_code
+
+
+"""
 Removes the header of each log line and groups them in blocks, according the timeframe between the VLT autoguider stopping an iteration
 and the beggining of the following iteration, which corresponds to an observation period.
 
@@ -72,7 +266,7 @@ Returns:
     A list of lists, with each containing a group of tuples, with the id of an observation first and 
     the pre-processed log line last, fitted by observation period.
 """
-def log_pre_processing(logger, log_lines):
+def log_pre_processing(logger: logging.Logger, log_lines: list[str]):
     global tracking_time
 
     ### Checkpoint - Start log pre-processing
@@ -140,7 +334,7 @@ Returns:
     A list of lists, with each containing a group of headerless log lines, with the id of an observation first and 
     the pre-processed log line last, fitted by observation period with successful observations.
 """
-def obs_filtering(logger, log_lines, obs_list):
+def obs_filtering(logger: logging.Logger, log_lines: list[list[str]], obs_list: list[str, str]):
     global tracking_time
 
     ### Checkpoint - Start observation log lines filtering
@@ -189,7 +383,7 @@ Args:
 Returns:
     A list of dictionaries, with each containing the dynamic data extracted from a log line.
 """
-def log_parsing_ttp(logger, log_sections, templates_list):
+def log_parsing_ttp(logger: logging.Logger, log_sections: list[list[str]], templates_list: list[str]):
     global tracking_time
 
     ### Checkpoint - Start log line parsing
@@ -247,13 +441,13 @@ Parsess each log line and extracts their dynamic data, using regular expressions
 
 Args:
     logger: Current script logging object.
-    log_sections: List of lists of log lines, grouped by successful observation period, in string form.
+    log_sections: List of log lines, grouped by successful observation period, in string form.
     templates_list: List of log line parsing templates, in string form.
 
 Returns:
     A list of dictionaries, with each containing the dynamic data extracted from a log line.
 """
-def log_parsing_regex(logger, log_sections, templates_list):
+def log_parsing_regex(logger: logging.Logger, log_sections: list[str, str], templates_list: list[str]):
     global tracking_time
 
     ### Checkpoint - Start log line parsing
@@ -281,7 +475,6 @@ def log_parsing_regex(logger, log_sections, templates_list):
 
                 # Parses a log line's date
                 check_forces = re.search(r"SetGlbAbs", parser.group())
-                check_onecal = re.search(r"ONECAL", parser.group())
                 check_inttime = re.search(r"INTTIME", parser.group())
                 check_exp_no= re.search(r"EXP NO", parser.group())
                     
@@ -289,6 +482,7 @@ def log_parsing_regex(logger, log_sections, templates_list):
                 if(check_forces is not None):
 
                     check_f_dist = re.search(r"Forces", parser.group())
+                    check_f_header = re.search(r"Executed", parser.group())
                         
                     if(check_f_dist is not None):
                         result["group"] = "forces"
@@ -297,16 +491,17 @@ def log_parsing_regex(logger, log_sections, templates_list):
                         result["time"] = parser.group(3)
                         result["data"] = parser.group(6)
 
-                    else:
+                    elif(check_f_header is not None):
                         result["group"] = "forces"
                         result["label"] = "f_id"
                         result["date"] = parser.group(2)
                         result["time"] = parser.group(3)
                         result["data"] = parser.group(5)
 
-                elif(check_onecal is not None):
-                    result["time"] = parser.group(2)
-                    result["group"] = parser.group(4)
+                    else:
+                        result["time"] = parser.group(3)
+                        result["data"] = parser.group(5)
+                        result["group"] = "INIT"
 
                 elif(check_exp_no is not None):
                     result["time"] = parser.group(2)
@@ -359,7 +554,7 @@ Args:
 Returns:
     None
 """
-def generate_dataframes(logger, parsed_data):
+def generate_dataframes(logger: logging.Logger, parsed_data: list[dict[str, str]]):
     global tracking_time
 
     ### Checkpoint - Start dataframes generation
@@ -392,13 +587,8 @@ def generate_dataframes(logger, parsed_data):
         "value_int": []
     }
 
-    dict_p_available = {
-        "pistons": []
-    }
-
     dict_corrections = {
         "timestamp": [],
-        "id_p_av" : [],
         "id_f_dist_old": [],
         "id_f_dist_new": [],
         "id_img_old": [],
@@ -413,7 +603,7 @@ def generate_dataframes(logger, parsed_data):
             if(line["label"] == "f_id"):
                 dict_f_dist["id_f_dist"].append(int(line["data"]))
                 dict_f_dist["forces"].append([])
-                dict_f_dist["timestamp"].append(datetime.strptime(line["time"].split(".")[0], "%H:%M:%S"))
+                dict_f_dist["timestamp"].append(datetime.strptime(line["time"].split(".")[0], "%H:%M:%S").time())
 
             elif(line["label"] == "f_dist"):
                 f_dist_index = len(dict_f_dist["id_f_dist"]) - 1
@@ -423,11 +613,10 @@ def generate_dataframes(logger, parsed_data):
                     for force in f_dist_content:
                         dict_f_dist["forces"][f_dist_index].append(float(force))
 
-        elif(line["group"] == "ONECAL"):
-            dict_corrections["timestamp"].append(datetime.strptime(line["time"], "%H:%M:%S"))
-            dict_corrections["id_p_av"].append(None)
+        elif(line["group"] == "INIT"):
+            dict_corrections["timestamp"].append(datetime.strptime(line["time"].split(".")[0], "%H:%M:%S").time())
             dict_corrections["id_f_dist_old"].append(None)
-            dict_corrections["id_f_dist_new"].append(None)
+            dict_corrections["id_f_dist_new"].append(int(line["data"]))
             dict_corrections["id_img_old"].append(None)
             dict_corrections["id_img_new"].append(None)
 
@@ -435,10 +624,10 @@ def generate_dataframes(logger, parsed_data):
 
             if(line["label"] == "INTTIME"):
                 dict_images["id_img"].append(None)
-                dict_images["exposition_start"].append(datetime.strptime(line["time"], "%H:%M:%S"))
+                dict_images["exposition_start"].append(datetime.strptime(line["time"], "%H:%M:%S").time())
                 dict_images["integration_time"].append(line["data"])
-                dict_images["readout_start"].append(None)
-                dict_images["readout_stop"].append(None)
+                dict_images["readout_start"].append(datetime.strptime(line["time"], "%H:%M:%S").time())
+                dict_images["readout_stop"].append((datetime.strptime(line["time"], "%H:%M:%S") + timedelta(seconds=float(line["data"]))).time())
                 dict_images["ccd"].append(None)
                 dict_images["img_path"].append(None)
 
@@ -446,12 +635,12 @@ def generate_dataframes(logger, parsed_data):
                 image_index = len(dict_images["id_img"]) - 1
 
                 if(image_index != -1):
-                    if (dict_images["exposition_start"][image_index] == datetime.strptime(line["time"], "%H:%M:%S")):
+                    if (dict_images["exposition_start"][image_index] == datetime.strptime(line["time"], "%H:%M:%S").time()):
                         dict_images["id_img"][image_index] = line["data"]
                         dict_images["ccd"][image_index] = line["label"]
 
         else:
-            dict_additional_data["timestamp"].append(datetime.strptime(line["time"], "%H:%M:%S"))
+            dict_additional_data["timestamp"].append(datetime.strptime(line["time"], "%H:%M:%S").time())
             dict_additional_data["group"].append(line["group"])
             dict_additional_data["label"].append(line["label"])
 
@@ -509,39 +698,37 @@ Args:
 Returns:
     nu_df_images: Dataframe of images with corrected information
 """
-def link_images(logger, ut, date, df_images):
+def link_images(logger: logging.Logger, df_images: pd.DataFrame, img_folder: str):
     global tracking_time
     
     ### Checkpoint - Start link images
     logger.info('Start link images: {0}'.format(str(time.time() - tracking_time)))
     tracking_time = time.time()
 
-    length = len(df_images["id_img"]) 
+    for img_path in img_folder:
+        with fits.open("img_files/{0}".format(img_path)) as hdul:
+            # Print information about the FITS file structure
+            hdul.info()
 
-    for i in range(length-1):
-        print(df_images.loc[i])
+            # Access the primary HDU
+            primary_hdu = hdul[0]
 
-        if(df_images.loc[i, "readout_start"] is not None):
-            file_path = "img_files/UT{0}_N{1}-ONEIA-{2}T{3}.fits".format(ut, df_images.loc[i, "ccd"][-1].upper(), date, df_images.loc[i, "exposition_start"].replace(":", "_"))
+            # Get the header information
+            header_info = primary_hdu.header
 
-            with fits.open(file_path) as hdul:
-                # Print information about the FITS file structure
-                hdul.info()
+            #img_date = header_info['DATE-OBS']
+            inttime = header_info['EXPTIME']
+            exp_no = header_info['HIERARCH ESO DET EXP NO']
 
-                # Access the primary HDU
-                primary_hdu = hdul[0]
+            try:
+                index_img_list = df_images['id_img'].index(exp_no)
 
-                # Get the header information
-                header_info = primary_hdu.header
-                fits_exp_start = header_info['DATE-OBS']
-                fits_integration_time = header_info['EXPTIME']
+            except ValueError:
+                continue
 
-        
-    if(fits_exp_start == df_images.loc[i, "exposition_start"]):
-        df_images.loc[i, "exposition_start"] = fits_exp_start
-
-    if(fits_integration_time == df_images.loc[i, "integration_time"]):
-        df_images.loc[i, "integration_time"] = fits_integration_time
+            else:
+                if(df_images['integration_time'][index_img_list] == inttime):
+                    df_images['img_path'][index_img_list] = img_path
 
     ### Checkpoint - End link images
     logger.info('End link images: {0}'.format(str(time.time() - tracking_time)))
@@ -560,78 +747,100 @@ Args:
 Returns:
     df_corrections: Dataframe of corrections' timestamps and related ids
 """
-def link_dataframes(logger, df_corrections, df_f_dist, df_images):
+def validate_corrections(logger: logging.Logger, df_corrections: pd.DataFrame, df_f_dist: pd.DataFrame):
+    global tracking_time
+    
+    ### Checkpoint - Start validate corrections
+    logger.info('Start validate corrections: {0}'.format(str(time.time() - tracking_time)))
+    tracking_time = time.time()
+
+    f_dist_id_list = df_f_dist["id_f_dist"].tolist()
+    
+    nu_df_corrections = df_corrections[df_corrections["id_f_dist_new"].isin(f_dist_id_list)]
+
+    nu_df_corrections = nu_df_corrections.reset_index(drop=True)
+
+    ### Checkpoint - End validate correections
+    logger.info('End validate corrections: {0}'.format(str(time.time() - tracking_time)))
+    tracking_time = time.time()
+
+    #return pd.DataFrame(dict_corrections)
+    return nu_df_corrections
+
+
+"""
+Builds the relationships between df_corrections and the rest of the dataframes
+
+Args:
+    df_corrections: Dataframe of timestamps of corrections
+    df_f_dist: Dataframe of force distributions
+
+Returns:
+    df_corrections: Dataframe of corrections' timestamps and related ids
+"""
+def link_dataframes(logger: logging.Logger, df_corrections: pd.DataFrame, df_attr: pd.DataFrame, name_attr: str, time_field: str):
     global tracking_time
     
     ### Checkpoint - Start link dataframes
     logger.info('Start link dataframes: {0}'.format(str(time.time() - tracking_time)))
     tracking_time = time.time()
 
-    halfday = datetime.strptime("12:00:00", "%H:%M:%S")
+    halfday = datetime.strptime("12:00:00", "%H:%M:%S").time()
 
     num_corrections = len(df_corrections["id_corr"])
 
+    # New temporary column for better conditioning
+    buffer_c_day = datetime(1970, 1, 1)
+
+    df_attr["unix"] = df_attr[time_field].apply(lambda x: datetime.combine(buffer_c_day, x).timestamp() 
+            if x >= halfday 
+            else datetime.combine(buffer_c_day + timedelta(days=1), x).timestamp())
+
     for index in range(num_corrections):
-        print(index)
 
-        # Link with forces distribution
-        max_f_time = datetime.strptime("00:00:00", "%H:%M:%S")
+        # Time of current correction
+        curr_time = df_corrections.loc[index, "timestamp"]
 
-        for f_time in df_f_dist["timestamp"].values:
-            print(f_time)
+        # Link with attribute
+        max_f_time = datetime.strptime("00:00:00", "%H:%M:%S").time()
 
-            if(
-                (f_time < df_corrections.loc[index, "timestamp"] and f_time > halfday) or
-                (f_time < df_corrections.loc[index, "timestamp"] and f_time < halfday)
-            ):
+        # Series indexes
+        old_id = "id_{0}_old".format(name_attr)
+        new_id = "id_{0}_new".format(name_attr)
+        attr_id = "id_{0}".format(name_attr)
+
+        # Add unix column for better conditioning
+        buffer_day = datetime(1970, 1, 1)
+
+        if(curr_time < halfday):
+            buffer_day += timedelta(days=1)
+           
+        curr_unix = datetime.combine(buffer_day, curr_time).timestamp()
+        print(curr_unix)
+
+        for f_time in df_attr["unix"]:
+
+            if(curr_unix > f_time):
                 max_f_time = f_time
 
             else:
-                if(max_f_time == datetime.strptime("00:00:00", "%H:%M:%S")):
-                    after_index = df_f_dist["timestamp"].tolist().index(f_time)
+                if(max_f_time == datetime.strptime("00:00:00", "%H:%M:%S").time()):
+                    after_index = df_attr["unix"].tolist().index(f_time)
                 
-                    df_corrections.loc[index, "id_f_dist_old"] = -1
-                    df_corrections.loc[index, "id_f_dist_new"] = df_f_dist.loc[after_index, "id_f_dist"]
+                    df_corrections.loc[index, old_id] = -1
+                    df_corrections.loc[index, new_id] = df_attr.loc[after_index, attr_id]
                 
                 else:
-                    before_index = df_f_dist["timestamp"].tolist().index(max_f_time)
-                    after_index = df_f_dist["timestamp"].tolist().index(f_time)
+                    before_index = df_attr["unix"].tolist().index(max_f_time)
+                    after_index = df_attr["unix"].tolist().index(f_time)
 
-                    df_corrections.loc[index, "id_f_dist_old"] = df_f_dist.loc[before_index, "id_f_dist"]
-                    df_corrections.loc[index, "id_f_dist_new"] = df_f_dist.loc[after_index, "id_f_dist"]
+                    df_corrections.loc[index, old_id] = df_attr.loc[before_index, attr_id]
+                    df_corrections.loc[index, new_id] = df_attr.loc[after_index, attr_id]
 
                 break
 
-        # Link with images
-        max_img_time = datetime.strptime("00:00:00", "%H:%M:%S")
-        
-        for img_time in df_images["exposition_start"].values:
-
-            if(img_time < df_corrections.loc[index, "timestamp"]):
-                max_img_time = img_time
-
-            else:
-                if(max_img_time == datetime.strptime("00:00:00", "%H:%M:%S")):
-                    after_index = df_images["exposition_start"].tolist().index(img_time)
-                    
-                    df_corrections.loc[index, "id_img_old"] = -1
-                    df_corrections.loc[index, "id_img_new"] = df_images.loc[after_index, "id_img"]
-                
-                else:
-                    before_index = df_images["exposition_start"].tolist().index(max_img_time)
-                    after_index = df_images["exposition_start"].tolist().index(img_time)
-                
-                    df_corrections.loc[index, "id_img_old"] = df_images.loc[before_index, "id_img"]
-                    df_corrections.loc[index, "id_img_new"] = df_images.loc[after_index, "id_img"]
-
-                break
-
-
-    #Last correction
-    #df_corrections.loc[length - 1, "id_f_dist_old"] = f_dist_id_series[length-2]
-    #df_corrections.loc[length - 1, "id_f_dist_new"] = -1
-    #df_corrections.loc[length - 1, "id_img_old"] = images_id_series[length-2]
-    #df_corrections.loc[length - 1, "id_img_new"] = -1
+    # Remove temporary column
+    df_attr.drop("unix", axis=1, inplace=True)
 
     ### Checkpoint - End link dataframes
     logger.info('End link dataframes: {0}'.format(str(time.time() - tracking_time)))
@@ -660,7 +869,7 @@ def save_parsed_data(parsed_data, dest_arch_name):
 if __name__ == '__main__':
 
     #### MVP Logger
-    logging.basicConfig(filename='P005.log', level=logging.INFO)
+    logging.basicConfig(filename='poc.log', level=logging.INFO)
     logger = logging.getLogger('myLogger')
 
     ### Import params
@@ -675,8 +884,6 @@ if __name__ == '__main__':
     dest_arch_name = params["destination_filename"]
     ### Relative path of template file
     tplt_arch_name = params["template_filename"]
-    ### Relative path of observation csvs
-    obs_csv_name = params["observation_filename"]
 
     #### Log lines pre-processing  
     pre_processed_logs_procesing = True
@@ -691,8 +898,12 @@ if __name__ == '__main__':
             #for section_tuples in pre_processed_logs:
                 #log_section = list(dict(section_tuples).values())
                 #f.write("\t".join(log_section))
-            for log_tuple in pre_processed_logs:
-                f.write(log_tuple[1])
+            try: 
+                for log_tuple in pre_processed_logs:
+                    f.write(log_tuple[1])
+
+            except UnicodeEncodeError as e:
+                print(e)
     else:
         pre_processed_logs = []
         
@@ -704,23 +915,24 @@ if __name__ == '__main__':
     #### Log lines' observation filtering
     obs_logs_procesing = True
     obs_logs = pre_processed_logs
-
-    #if obs_logs_procesing:
-        #obs_list = open_obs_file("obs_files/{0}.csv".format(obs_csv_name))
-        #obs_logs = obs_filtering(logger, pre_processed_logs, obs_list)
+    
+    if obs_logs_procesing:
+        obs_fetching = fetch_obs_file("obs_files", date)
+        obs_list = open_obs_file("obs_files/{0}.csv".format(date))
+        obs_logs = obs_filtering(logger, pre_processed_logs, obs_list)
 
         # Save observation logs to file
-        #with open('mid_files/observation_logs.txt', "w") as f:
-            #for section_tuples in obs_logs:
-                #log_section = list(dict(section_tuples).values())
-                #f.write("\t".join(log_section))
-    #else:
-        #obs_logs = []
+        with open('mid_files/observation_logs.txt', "w") as f:
+            for section_tuples in obs_logs:
+                log_section = list(dict(section_tuples).values())
+                f.write("\t".join(log_section))
+    else:
+        obs_logs = []
         
         # Load from file
-        #with open('mid_files/observation_logs.txt') as f:
-            #for log_section in f.readlines():
-                #obs_logs.append(log_section.split("\t"))
+        with open('mid_files/observation_logs.txt') as f:
+            for log_section in f.readlines():
+                obs_logs.append(log_section.split("\t"))
 
     #### Log lines parsing
     
@@ -751,13 +963,19 @@ if __name__ == '__main__':
     #### Parsed data classifier
     df_f_dist, df_additional_data, df_corrections, df_images = generate_dataframes(logger, parsed_data)
 
-    ### Linking df_images and fits files
-    #df_images = link_images(logger, ut, date, df_images)
+    #### Linking df_images and fits files
+    #df_images = link_images(logger, df_images, "img_files")
 
-    #### Parsed data relater
-    df_corrections = link_dataframes(logger, df_corrections, df_f_dist, df_images)
+    #### Validate successful correction instances
+    df_corrections = validate_corrections(logger, df_corrections, df_f_dist)
 
+    #### Link forces distribution with correction instances
+    df_corrections = link_dataframes(logger, df_corrections, df_f_dist, "f_dist", "timestamp")
 
+    #### Link forces distribution with correction instances
+    df_corrections = link_dataframes(logger, df_corrections, df_images, "img", "exposition_start")
+
+    #### Save df in csv files
     df_f_dist.to_csv("dataframes/df_f_dist.csv", index=False)
     df_additional_data.to_csv("dataframes/df_additional_data.csv", index=False)
     df_corrections.to_csv("dataframes/df_corrections.csv", index=False)
@@ -767,7 +985,3 @@ if __name__ == '__main__':
     print(df_additional_data)
     print(df_corrections)
     print(df_images)
-
-    df_alt_az = df_additional_data.groupby("label").get_group(" ")
-    df_alt_az.to_csv("dataframes/df_alt_az.csv", index=False)
-    print(df_alt_az)

@@ -30,7 +30,7 @@ df_f_act_list = [df_f_original] * num_actuators
 
 for pndex in range(n_partitions):
 
-    fig, axes = plt.subplots(nrows=n_rows, figsize=(102.4, 51.2))
+    fig, axes = plt.subplot(nrows=n_rows, figsize=(102.4, 51.2))
 
     for index in range(n_rows):
         value_list = []
