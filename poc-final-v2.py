@@ -516,7 +516,7 @@ def new_obs_filtering(logger: logging.Logger, log_lines: list[str], obs_list: li
 
         obs_data_intervals[instrument] = section_log
         
-    print(len(obs_time_intervals))
+        #print(instrument + " : " + str(len(interval_list)))
 
     ### Checkpoint - End new observation log lines filtering
     logger.info('End new observation log lines filtering: {0} - Lines passed: {1}'.format(str(time.time() - tracking_time), str(num_lines_passed)))
@@ -1126,59 +1126,61 @@ def link_dataframes(logger: logging.Logger, df_corrections: pd.DataFrame, df_att
     # New temporary column for better conditioning
     buffer_c_day = datetime(1970, 1, 1)
 
-    #print(df_attr)
+    try:
+        df_attr["unix"] = df_attr[time_field].apply(lambda x: datetime.combine(buffer_c_day, x).timestamp() 
+                if x >= halfday 
+                else datetime.combine(buffer_c_day + timedelta(days=1), x).timestamp())
+        
+        # Set a maximum boundary from the max time in df_attr's unix column
+        upper_boundary = df_attr["unix"].iloc[-1]
 
-    df_attr["unix"] = df_attr[time_field].apply(lambda x: datetime.combine(buffer_c_day, x).timestamp() 
-            if x >= halfday 
-            else datetime.combine(buffer_c_day + timedelta(days=1), x).timestamp())
-    
-    # Set a maximum boundary from the max time in df_attr's unix column
-    upper_boundary = df_attr["unix"].iloc[-1]
+        for index in range(num_corrections):
 
-    for index in range(num_corrections):
+            # Time of current correction
+            curr_time = df_corrections.loc[index, "timestamp"]
 
-        # Time of current correction
-        curr_time = df_corrections.loc[index, "timestamp"]
+            # Link with attribute
+            max_f_time = datetime.strptime("00:00:00", "%H:%M:%S").time()
 
-        # Link with attribute
-        max_f_time = datetime.strptime("00:00:00", "%H:%M:%S").time()
+            # Series indexes
+            old_id = "id_{0}_old".format(name_attr)
+            new_id = "id_{0}_new".format(name_attr)
+            attr_id = "id_{0}".format(name_attr)
 
-        # Series indexes
-        old_id = "id_{0}_old".format(name_attr)
-        new_id = "id_{0}_new".format(name_attr)
-        attr_id = "id_{0}".format(name_attr)
+            # Add unix column for better conditioning
+            buffer_day = datetime(1970, 1, 1)
 
-        # Add unix column for better conditioning
-        buffer_day = datetime(1970, 1, 1)
+            if(curr_time < halfday):
+                buffer_day += timedelta(days=1)
+            
+            curr_unix = datetime.combine(buffer_day, curr_time).timestamp()
 
-        if(curr_time < halfday):
-            buffer_day += timedelta(days=1)
-           
-        curr_unix = datetime.combine(buffer_day, curr_time).timestamp()
+            for f_time in df_attr["unix"]:
 
-        for f_time in df_attr["unix"]:
+                if(curr_unix > f_time and upper_boundary > f_time):
+                    max_f_time = f_time
 
-            if(curr_unix > f_time and upper_boundary > f_time):
-                max_f_time = f_time
-
-            else:
-                if(max_f_time == datetime.strptime("00:00:00", "%H:%M:%S").time()):
-                    after_index = df_attr["unix"].tolist().index(f_time)
-                
-                    df_corrections.loc[index, old_id] = -1
-                    df_corrections.loc[index, new_id] = df_attr.loc[after_index, attr_id]
-                
                 else:
-                    before_index = df_attr["unix"].tolist().index(max_f_time)
-                    after_index = df_attr["unix"].tolist().index(f_time)
+                    if(max_f_time == datetime.strptime("00:00:00", "%H:%M:%S").time()):
+                        after_index = df_attr["unix"].tolist().index(f_time)
+                    
+                        df_corrections.loc[index, old_id] = -1
+                        df_corrections.loc[index, new_id] = df_attr.loc[after_index, attr_id]
+                    
+                    else:
+                        before_index = df_attr["unix"].tolist().index(max_f_time)
+                        after_index = df_attr["unix"].tolist().index(f_time)
 
-                    df_corrections.loc[index, old_id] = df_attr.loc[before_index, attr_id]
-                    df_corrections.loc[index, new_id] = df_attr.loc[after_index, attr_id]
+                        df_corrections.loc[index, old_id] = df_attr.loc[before_index, attr_id]
+                        df_corrections.loc[index, new_id] = df_attr.loc[after_index, attr_id]
 
-                break
+                    break
 
-    # Remove temporary column
-    df_attr.drop("unix", axis=1, inplace=True)
+        # Remove temporary column
+        df_attr.drop("unix", axis=1, inplace=True)
+    
+    except IndexError:
+        print('Dataframe for {0} is empty. No linking done.'.format(name_attr))
 
     ### Checkpoint - End link dataframes
     logger.info('End link dataframes: {0}'.format(str(time.time() - tracking_time)))
