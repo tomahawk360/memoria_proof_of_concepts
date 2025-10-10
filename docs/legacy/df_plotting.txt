@@ -1,0 +1,1 @@
+Esta funcion se encarga de graficar las distribuciones de fuerza, las altitudes y azimutes dentro del dataframe segun el tiempo.

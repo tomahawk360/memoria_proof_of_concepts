@@ -1,0 +1,1 @@
+Segmenta un archivo de log en bloques limitados por lecturas desde un sensor, y busca lineas de fuerzas dentro de estos bloques.

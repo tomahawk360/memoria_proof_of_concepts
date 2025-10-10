@@ -1,0 +1,1 @@
+Extrae la fecha de observacion, el tiempo de exposicion y el numero de identificacion de un archivo fits.

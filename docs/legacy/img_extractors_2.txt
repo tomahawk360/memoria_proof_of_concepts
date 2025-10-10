@@ -1,0 +1,1 @@
+Extrae las lineas donde aparezcan los numeros de identificacion o tiempos de integracion de una imagen desde un log.

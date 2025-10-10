@@ -1,0 +1,1 @@
+Hace fetch al query de eso raw para obtener los datos de observacion de un UT en una noche.

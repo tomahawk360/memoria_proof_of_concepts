@@ -1,0 +1,1 @@
+Revisa una lista con los periodos de observaciones de grupos de lineas de log y filtra aquellas grupos donde una observacion no ha sido exitosa.

@@ -1,0 +1,1 @@
+Parsea datos de lineas de log segun plantillas guardadas de forma externa, usando la libreria ttp.
